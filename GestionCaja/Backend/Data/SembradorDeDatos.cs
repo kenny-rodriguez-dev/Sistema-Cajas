@@ -13,9 +13,6 @@ public static class SembradorDeDatos
         bool yaHayAdministrador = await contexto.Usuarios
             .AnyAsync(u => u.RolId == 1);
 
-        Console.WriteLine("HASH 1: " + BCrypt.Net.BCrypt.HashPassword("Admin1234"));
-        Console.WriteLine("HASH 2: " + BCrypt.Net.BCrypt.HashPassword("Admin1234"));
-
         if (yaHayAdministrador) return;
         // ESTA LÍNEA ES LA IMPORTANTE.
         //

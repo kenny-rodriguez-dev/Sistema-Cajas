@@ -1,46 +1,37 @@
 @host = http://localhost:5219
 
-### 1. Listar (debe salir vacío al principio)
-GET {{host}}/api/clientes
-
-### 2. Crear un cliente VÁLIDO -> 201
-POST {{host}}/api/clientes
+### 1. Login CORRECTO -> 200 con el token
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
-  "nombres": "Kenny",
-  "apellidos": "Perez",
-  "identificacion": "0912345678",
-  "correo": "kenny@ejemplo.com",
-  "telefono": "0987654321",
-  "direccion": "Ciudadela Los Rosales manzana 5 villa 12",
-  "referenciaDireccion": "Frente al parque central junto a la farmacia"
+  "username": "admin0001",
+  "password": "Admin1234"
 }
 
-### 3. Crear uno INVÁLIDO -> 400 con TODOS los errores juntos
-POST {{host}}/api/clientes
+### 2. Contraseña equivocada -> 401
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
-  "nombres": "A",
-  "apellidos": "",
-  "identificacion": "091234ABC",
-  "correo": "esto-no-es-un-correo",
-  "telefono": "0812345678",
-  "direccion": "corta",
-  "referenciaDireccion": "tambien corta"
+  "username": "admin0001",
+  "password": "ClaveIncorrecta1"
 }
 
-### 4. Repetir la identificación del #2 -> 409
-POST {{host}}/api/clientes
+### 3. Usuario que no existe -> 401 CON EL MISMO MENSAJE que el #2
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
-  "nombres": "Otro",
-  "apellidos": "Cliente",
-  "identificacion": "0912345678",
-  "correo": "otro@ejemplo.com",
-  "telefono": "0999888777",
-  "direccion": "Otra direccion cualquiera de mas de veinte",
-  "referenciaDireccion": "Otra referencia cualquiera de mas de veinte"
+  "username": "fantasma0001",
+  "password": "LoQueSea1234"
+}
+
+### 4. Campos vacíos -> 400 (ni siquiera llega a mi código)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "",
+  "password": ""
 }

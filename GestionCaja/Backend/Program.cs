@@ -1,5 +1,9 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Backend.Data;
+using Backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +17,38 @@ builder.Services.AddDbContext<AppDbContext>(opciones =>
         builder.Configuration.GetConnectionString("BaseDeDatos")
     )
 );
+
+builder.Services.AddScoped<ServicioDeTokens>();
+// Registro mi servicio para poder pedirlo en el constructor del controlador.
+// Sin esta línea, .NET no sabría fabricarlo y la app reventaría al arrancar
+// con "Unable to resolve service".
+//
+// Scoped = uno nuevo por cada petición HTTP.
+
+// ─── AUTENTICACIÓN ───
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opciones =>
+    {
+        opciones.TokenValidationParameters = new TokenValidationParameters
+        {
+            // Estas son las preguntas que .NET le hará a CADA token que llegue.
+            ValidateIssuerSigningKey = true,   // ¿la firma es mía?
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Clave"]!)
+            ),
+            ValidateIssuer = true,             // ¿lo emití yo?
+            ValidIssuer = builder.Configuration["Jwt:Emisor"],
+            ValidateAudience = true,           // ¿es para mi frontend?
+            ValidAudience = builder.Configuration["Jwt:Audiencia"],
+            ValidateLifetime = true,           // ¿no ha expirado?
+            ClockSkew = TimeSpan.Zero
+            // Por defecto .NET perdona 5 minutos de desfase de reloj.
+            // Para desarrollo lo pongo en cero para que la expiración
+            // sea exacta y puedas probarla sin esperar de más.
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 const string PoliticaCors = "PermitirFrontend";
 
@@ -29,26 +65,13 @@ builder.Services.AddCors(opciones =>
 
 var app = builder.Build();
 
-// ─── SIEMBRA (corre UNA vez al arrancar, no por petición) ────
+// ─── SIEMBRA ─────────────────────────────────────────────────
 
 using (var alcance = app.Services.CreateScope())
 {
     var contexto = alcance.ServiceProvider.GetRequiredService<AppDbContext>();
     await SembradorDeDatos.SembrarAsync(contexto);
 }
-// ¿Por qué este "CreateScope" tan raro?
-//
-// El DbContext se registró como SCOPED: .NET fabrica uno nuevo por cada
-// petición HTTP y lo destruye al terminar. Así dos peticiones simultáneas
-// no se pisan los datos.
-//
-// Pero aquí NO estamos dentro de una petición: estamos arrancando.
-// No existe ningún "alcance" al que pedirle un DbContext.
-// Entonces creo uno a mano, saco mi DbContext, y el "using" se encarga
-// de cerrarlo y liberar la conexión al terminar el bloque.
-//
-// Esto va DESPUÉS de builder.Build() porque necesita la app ya construida,
-// y ANTES de app.Run() porque Run() se queda bloqueado escuchando.
 
 // ─── MITAD 2: LA TUBERÍA ────────────────────────────────────
 
@@ -58,6 +81,17 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors(PoliticaCors);
+app.UseAuthentication();
+app.UseAuthorization();
+// ═══ ESTE ORDEN NO SE TOCA. Es lo que te advertí hace tres mensajes. ═══
+//
+// CORS primero: el preflight OPTIONS viaja SIN token. Si Authentication
+// fuera antes, lo cortaría con un 401, la respuesta nunca pasaría por CORS,
+// y el navegador te reportaría... un error de CORS. Buscarías el problema
+// en el lugar equivocado durante horas.
+//
+// Authentication antes que Authorization, por razones obvias:
+// primero "¿quién eres?", después "¿puedes hacer esto?".
 
 app.MapControllers();
 
