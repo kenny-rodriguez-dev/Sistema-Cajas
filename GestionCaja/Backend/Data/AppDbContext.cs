@@ -3,56 +3,78 @@ using Backend.Models;
 
 namespace Backend.Data;
 
-// El DbContext es el PUENTE entre tus objetos de C# y la base de datos.
-// Es quien abre la conexión, traduce a SQL, y va anotando qué cambió
-// para saber qué guardar cuando le digas.
 public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> opciones) : base(opciones)
     {
     }
-    // Esto es un CONSTRUCTOR: el método que corre al crear el objeto.
-    //
-    // Fíjate que no dice en ningún lado a qué base se conecta. Recibe las
-    // opciones desde afuera y se las pasa a su clase padre (": base(...)").
-    //
-    // Eso es INYECCIÓN DE DEPENDENCIAS: la clase no busca lo que necesita,
-    // se lo entregan. En el Paso 5 verás quién se lo entrega.
 
     public DbSet<Cliente> Clientes => Set<Cliente>();
-    // Un DbSet ES una tabla, vista desde C#.
-    // "Clientes" será el nombre de la tabla; Cliente el molde de cada fila.
-    //
-    // Cada tabla nueva del proyecto va a ser una línea más aquí.
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<Rol> Roles => Set<Rol>();
+    // Dos tablas nuevas. Cada tabla del proyecto es una línea aquí.
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
-        // Aquí afino cómo se construye la tabla, más allá de las convenciones.
-        // Esto es la CAPA 4 de validación: las reglas dentro de la base misma.
-
+        // ─── CLIENTE (igual que antes) ───
         modelo.Entity<Cliente>(entidad =>
         {
-            entidad.Property(c => c.Identificacion)
-                   .HasMaxLength(13)   // el máximo que pide el enunciado
-                   .IsRequired();      // en SQL: NOT NULL
-
+            entidad.Property(c => c.Identificacion).HasMaxLength(13).IsRequired();
             entidad.HasIndex(c => c.Identificacion).IsUnique();
-            // ESTA LÍNEA ES IMPORTANTE.
-            // "Los clientes solo pueden registrarse una sola vez y se valida
-            // por su número de identificación."
-            //
-            // Un índice único hace que SQL Server RECHACE una cédula repetida,
-            // aunque el intento venga por fuera de tu API.
-            // Es la última red de seguridad de la que hablamos.
-
             entidad.Property(c => c.Nombres).HasMaxLength(50).IsRequired();
             entidad.Property(c => c.Apellidos).HasMaxLength(50).IsRequired();
             entidad.Property(c => c.Correo).HasMaxLength(120).IsRequired();
             entidad.Property(c => c.Telefono).HasMaxLength(13).IsRequired();
             entidad.Property(c => c.Direccion).HasMaxLength(100).IsRequired();
             entidad.Property(c => c.ReferenciaDireccion).HasMaxLength(100).IsRequired();
-            // Sin HasMaxLength, EF crea cada texto como NVARCHAR(MAX),
-            // que es enorme y no se puede indexar bien. Siempre pon el límite.
+        });
+
+        // ─── ROL ───
+        modelo.Entity<Rol>(entidad =>
+        {
+            entidad.Property(r => r.Nombre).HasMaxLength(50).IsRequired();
+            entidad.HasIndex(r => r.Nombre).IsUnique();
+
+            entidad.HasData(
+                new Rol { Id = 1, Nombre = "Administrador" },
+                new Rol { Id = 2, Nombre = "Gestor" },
+                new Rol { Id = 3, Nombre = "Cajero" }
+            );
+            // HasData mete estas filas DENTRO DE LA MIGRACIÓN.
+            // Cuando corras Update-Database, se insertan solas.
+            //
+            // Solo sirve para datos fijos de catálogo, que nunca cambian
+            // y cuyo valor puedo escribir literalmente aquí.
+            // Fíjate que les asigno el Id a mano: tiene que ser siempre
+            // el mismo en todas las máquinas, o mi código se rompería.
+        });
+
+        // ─── USUARIO ───
+        modelo.Entity<Usuario>(entidad =>
+        {
+            entidad.Property(u => u.Username).HasMaxLength(20).IsRequired();
+
+            entidad.HasIndex(u => u.Username).IsUnique();
+            // "El nombre de usuario no debe estar duplicado."
+            // Capa 4: que lo garantice la base misma.
+
+            entidad.Property(u => u.PasswordHash).HasMaxLength(100).IsRequired();
+            // 100 caracteres porque un hash de BCrypt siempre mide 60.
+            // Nunca guardas la contraseña, así que su largo real da igual.
+
+            entidad.Property(u => u.Correo).HasMaxLength(120).IsRequired();
+
+            entidad.HasOne(u => u.Rol)              // un usuario tiene UN rol
+                   .WithMany(r => r.Usuarios)       // un rol tiene MUCHOS usuarios
+                   .HasForeignKey(u => u.RolId)     // conectados por esta columna
+                   .OnDelete(DeleteBehavior.Restrict);
+            // Esas cuatro líneas son la relación, dicha en voz alta.
+            // Aquí EF la habría adivinado sola, pero escribirla explícita
+            // es mejor: quien lea el código ve la intención sin adivinar.
+            //
+            // Restrict = "no dejes borrar un rol si tiene usuarios".
+            // La alternativa (Cascade) borraría los usuarios junto con el rol.
+            // Eso es exactamente el desastre que quieres evitar.
         });
     }
 }

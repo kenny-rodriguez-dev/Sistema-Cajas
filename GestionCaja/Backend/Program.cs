@@ -13,15 +13,6 @@ builder.Services.AddDbContext<AppDbContext>(opciones =>
         builder.Configuration.GetConnectionString("BaseDeDatos")
     )
 );
-// LÍNEA NUEVA. Aquí se juntan las tres cosas del paso anterior:
-//
-//   AddDbContext<AppDbContext>  ->  "guarda mi puente en la caja"
-//   UseSqlServer                ->  "y que hable SQL Server"
-//   GetConnectionString(...)    ->  "la dirección está en appsettings.json"
-//
-// Esto es lo que le entrega las "opciones" al constructor del AppDbContext.
-// A partir de ahora, cualquier controlador puede pedir un AppDbContext
-// y .NET se lo fabrica solo, ya conectado.
 
 const string PoliticaCors = "PermitirFrontend";
 
@@ -37,6 +28,27 @@ builder.Services.AddCors(opciones =>
 });
 
 var app = builder.Build();
+
+// ─── SIEMBRA (corre UNA vez al arrancar, no por petición) ────
+
+using (var alcance = app.Services.CreateScope())
+{
+    var contexto = alcance.ServiceProvider.GetRequiredService<AppDbContext>();
+    await SembradorDeDatos.SembrarAsync(contexto);
+}
+// ¿Por qué este "CreateScope" tan raro?
+//
+// El DbContext se registró como SCOPED: .NET fabrica uno nuevo por cada
+// petición HTTP y lo destruye al terminar. Así dos peticiones simultáneas
+// no se pisan los datos.
+//
+// Pero aquí NO estamos dentro de una petición: estamos arrancando.
+// No existe ningún "alcance" al que pedirle un DbContext.
+// Entonces creo uno a mano, saco mi DbContext, y el "using" se encarga
+// de cerrarlo y liberar la conexión al terminar el bloque.
+//
+// Esto va DESPUÉS de builder.Build() porque necesita la app ya construida,
+// y ANTES de app.Run() porque Run() se queda bloqueado escuchando.
 
 // ─── MITAD 2: LA TUBERÍA ────────────────────────────────────
 

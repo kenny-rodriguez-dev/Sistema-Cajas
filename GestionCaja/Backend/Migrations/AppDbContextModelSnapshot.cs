@@ -78,6 +78,111 @@ namespace Backend.Migrations
 
                     b.ToTable("Clientes");
                 });
+
+            modelBuilder.Entity("Backend.Models.Rol", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Nombre = "Administrador"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Nombre = "Gestor"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Nombre = "Cajero"
+                        });
+                });
+
+            modelBuilder.Entity("Backend.Models.Usuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Aprobado")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("AprobadoPorUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int?>("CreadoPorUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("RolId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RolId");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("Backend.Models.Usuario", b =>
+                {
+                    b.HasOne("Backend.Models.Rol", "Rol")
+                        .WithMany("Usuarios")
+                        .HasForeignKey("RolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Rol");
+                });
+
+            modelBuilder.Entity("Backend.Models.Rol", b =>
+                {
+                    b.Navigation("Usuarios");
+                });
 #pragma warning restore 612, 618
         }
     }
