@@ -1,6 +1,46 @@
-@Backend_HostAddress = http://localhost:5219
+@host = http://localhost:5219
 
-GET {{Backend_HostAddress}}/weatherforecast/
-Accept: application/json
+### 1. Listar (debe salir vacío al principio)
+GET {{host}}/api/clientes
 
-###
+### 2. Crear un cliente VÁLIDO -> 201
+POST {{host}}/api/clientes
+Content-Type: application/json
+
+{
+  "nombres": "Kenny",
+  "apellidos": "Perez",
+  "identificacion": "0912345678",
+  "correo": "kenny@ejemplo.com",
+  "telefono": "0987654321",
+  "direccion": "Ciudadela Los Rosales manzana 5 villa 12",
+  "referenciaDireccion": "Frente al parque central junto a la farmacia"
+}
+
+### 3. Crear uno INVÁLIDO -> 400 con TODOS los errores juntos
+POST {{host}}/api/clientes
+Content-Type: application/json
+
+{
+  "nombres": "A",
+  "apellidos": "",
+  "identificacion": "091234ABC",
+  "correo": "esto-no-es-un-correo",
+  "telefono": "0812345678",
+  "direccion": "corta",
+  "referenciaDireccion": "tambien corta"
+}
+
+### 4. Repetir la identificación del #2 -> 409
+POST {{host}}/api/clientes
+Content-Type: application/json
+
+{
+  "nombres": "Otro",
+  "apellidos": "Cliente",
+  "identificacion": "0912345678",
+  "correo": "otro@ejemplo.com",
+  "telefono": "0999888777",
+  "direccion": "Otra direccion cualquiera de mas de veinte",
+  "referenciaDireccion": "Otra referencia cualquiera de mas de veinte"
+}
