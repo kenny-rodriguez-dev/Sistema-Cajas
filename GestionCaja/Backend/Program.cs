@@ -1,9 +1,13 @@
-using System.Text;
+using Application.Interfaces;
+using Infrastructure.Data;
+using Infrastructure.Repositories;
+using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Backend.Data;
-using Backend.Services;
+using System.Text;
+using Application.Interfaces;
+using Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +68,15 @@ builder.Services.AddCors(opciones =>
 });
 
 var app = builder.Build();
+
+builder.Services.AddScoped<IRepositorioClientes, RepositorioClientes>();
+// SE LEE ASÍ: "cuando alguien pida un IRepositorioClientes,
+//              entrégale un RepositorioClientes".
+//
+// ESTA LÍNEA ES EL PEGAMENTO DE TODA LA ARQUITECTURA.
+// Es el único lugar de todo el proyecto donde la interfaz y su
+// implementación se tocan. Cambia esta sola línea y todo el sistema
+// pasa a usar otra base de datos, sin tocar nada más.
 
 // ─── SIEMBRA ─────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
-﻿using Backend.Data;
-using Backend.Dtos;
-using Backend.Services;
+﻿using Infrastructure.Data;
+using Application.Dtos;
+using Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
