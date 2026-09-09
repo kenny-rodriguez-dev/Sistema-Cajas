@@ -1,13 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Backend.Data;
+﻿using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]   // ClientesController -> /api/clientes
+[Route("api/[controller]")]
+[Authorize]// ClientesController -> /api/clientes
 public class ClientesController : ControllerBase
 {
     private readonly AppDbContext _contexto;

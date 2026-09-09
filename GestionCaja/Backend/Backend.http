@@ -35,3 +35,22 @@ Content-Type: application/json
   "username": "",
   "password": ""
 }
+
+### 5. Clientes SIN token -> 401
+GET {{host}}/api/clientes
+
+### 6. Guarda el token del login #1 aquí (pega el texto largo)
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImFkbWluMDAwMSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluaXN0cmFkb3IiLCJqdGkiOiI2Y2QyYWYzMy03YzljLTQzMzctODIwYy1mODhiMGM3MjM5YzQiLCJleHAiOjE3ODg5MTQxOTQsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.A40GyOD7JiKpHTGHtlivFG6rG2M8_NYFEqp3qWbhaHM
+
+### 7. Clientes CON token -> 200
+GET {{host}}/api/clientes
+Authorization: Bearer {{token}}
+
+### 8. Quién soy, según el token
+GET {{host}}/api/auth/yo
+Authorization: Bearer {{token}}
+
+### 9. TOKEN MANIPULADO -> 401
+# Copia tu token y cámbiale UNA sola letra del pedazo del medio
+GET {{host}}/api/clientes
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwhS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImFkbWluMDAwMSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluaXN0cmFkb3IiLCJqdGkiOiI2Y2QyYWYzMy03YzljLTQzMzctODIwYy1mODhiMGM3MjM5YzQiLCJleHAiOjE3ODg5MTQxOTQsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.A40GyOD7JiKpHTGHtlivFG6rG2M8_NYFEqp3qWbhaHM

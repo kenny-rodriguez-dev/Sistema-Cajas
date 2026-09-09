@@ -1,8 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Backend.Data;
+﻿using Backend.Data;
 using Backend.Dtos;
 using Backend.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Backend.Controllers;
 
@@ -86,5 +90,27 @@ public class AuthController : ControllerBase
             Rol = usuario.Rol.Nombre,
             Expira = expira
         });
+    }
+    [HttpGet("yo")]     // -> GET /api/auth/yo
+    [Authorize]
+    public IActionResult Yo()
+    {
+        // Este endpoint no toca la base de datos. Lee del TOKEN.
+        //
+        // Cuando UseAuthentication validó el token, desempacó sus claims
+        // y los dejó en "User", una propiedad que ControllerBase me regala.
+        // Está disponible en cualquier controlador, siempre.
+
+        var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var username = User.FindFirst(ClaimTypes.Name)?.Value;
+        var rol = User.FindFirst(ClaimTypes.Role)?.Value;
+        // FindFirst busca un claim por nombre. El "?" evita que reviente
+        // si no existe: devuelve null en vez de tirar excepción.
+        //
+        // Estos son EXACTAMENTE los claims que metiste en ServicioDeTokens.
+        // Dieron la vuelta completa: los firmaste, viajaron al cliente,
+        // volvieron, .NET verificó la firma, y aquí los estás leyendo.
+
+        return Ok(new { id, username, rol });
     }
 }
