@@ -12,11 +12,12 @@ public class AppDbContext : DbContext
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Rol> Roles => Set<Rol>();
-    // Dos tablas nuevas. Cada tabla del proyecto es una línea aquí.
+    public DbSet<OpcionMenu> OpcionesMenu => Set<OpcionMenu>();
+    public DbSet<OpcionMenuRol> OpcionesMenuRoles => Set<OpcionMenuRol>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
-        // ─── CLIENTE (igual que antes) ───
+        // ─── CLIENTE ───
         modelo.Entity<Cliente>(entidad =>
         {
             entidad.Property(c => c.Identificacion).HasMaxLength(13).IsRequired();
@@ -40,41 +41,81 @@ public class AppDbContext : DbContext
                 new Rol { Id = 2, Nombre = "Gestor" },
                 new Rol { Id = 3, Nombre = "Cajero" }
             );
-            // HasData mete estas filas DENTRO DE LA MIGRACIÓN.
-            // Cuando corras Update-Database, se insertan solas.
-            //
-            // Solo sirve para datos fijos de catálogo, que nunca cambian
-            // y cuyo valor puedo escribir literalmente aquí.
-            // Fíjate que les asigno el Id a mano: tiene que ser siempre
-            // el mismo en todas las máquinas, o mi código se rompería.
         });
 
         // ─── USUARIO ───
         modelo.Entity<Usuario>(entidad =>
         {
             entidad.Property(u => u.Username).HasMaxLength(20).IsRequired();
-
             entidad.HasIndex(u => u.Username).IsUnique();
-            // "El nombre de usuario no debe estar duplicado."
-            // Capa 4: que lo garantice la base misma.
-
             entidad.Property(u => u.PasswordHash).HasMaxLength(100).IsRequired();
-            // 100 caracteres porque un hash de BCrypt siempre mide 60.
-            // Nunca guardas la contraseña, así que su largo real da igual.
-
             entidad.Property(u => u.Correo).HasMaxLength(120).IsRequired();
 
-            entidad.HasOne(u => u.Rol)              // un usuario tiene UN rol
-                   .WithMany(r => r.Usuarios)       // un rol tiene MUCHOS usuarios
-                   .HasForeignKey(u => u.RolId)     // conectados por esta columna
+            entidad.HasOne(u => u.Rol)
+                   .WithMany(r => r.Usuarios)
+                   .HasForeignKey(u => u.RolId)
                    .OnDelete(DeleteBehavior.Restrict);
-            // Esas cuatro líneas son la relación, dicha en voz alta.
-            // Aquí EF la habría adivinado sola, pero escribirla explícita
-            // es mejor: quien lea el código ve la intención sin adivinar.
-            //
-            // Restrict = "no dejes borrar un rol si tiene usuarios".
-            // La alternativa (Cascade) borraría los usuarios junto con el rol.
-            // Eso es exactamente el desastre que quieres evitar.
+        });
+
+        // ─── OPCIÓN DE MENÚ ───
+        modelo.Entity<OpcionMenu>(entidad =>
+        {
+            entidad.Property(o => o.Etiqueta).HasMaxLength(50).IsRequired();
+            entidad.Property(o => o.Ruta).HasMaxLength(100).IsRequired();
+
+            entidad.HasData(
+                new OpcionMenu { Id = 1, Etiqueta = "Bienvenida", Ruta = "/bienvenida", Orden = 1, Activo = true },
+                new OpcionMenu { Id = 2, Etiqueta = "Dashboard", Ruta = "/dashboard", Orden = 2, Activo = true },
+                new OpcionMenu { Id = 3, Etiqueta = "Usuarios", Ruta = "/usuarios", Orden = 3, Activo = true },
+                new OpcionMenu { Id = 4, Etiqueta = "Asignación de turnos", Ruta = "/turnos", Orden = 4, Activo = true },
+                new OpcionMenu { Id = 5, Etiqueta = "Procesos de caja", Ruta = "/caja", Orden = 5, Activo = true },
+                new OpcionMenu { Id = 6, Etiqueta = "Clientes", Ruta = "/clientes/nuevo", Orden = 6, Activo = true }
+            );
+            // Varias de esas rutas todavía no existen en el frontend.
+            // Está bien: el menú es el mapa del proyecto completo, y las
+            // pantallas se van llenando en las rebanadas siguientes.
+        });
+
+        // ─── LA TABLA INTERMEDIA ───
+        modelo.Entity<OpcionMenuRol>(entidad =>
+        {
+            entidad.HasKey(x => new { x.OpcionMenuId, x.RolId });
+            // ═══ LLAVE PRIMARIA COMPUESTA ═══
+            // La llave no es una columna: son DOS juntas.
+            // Eso es lo que hace imposible repetir la misma pareja.
+
+            entidad.HasOne(x => x.OpcionMenu)
+                   .WithMany(o => o.Roles)
+                   .HasForeignKey(x => x.OpcionMenuId);
+
+            entidad.HasOne(x => x.Rol)
+                   .WithMany(r => r.OpcionesMenu)
+                   .HasForeignKey(x => x.RolId);
+            // Dos relaciones "uno a muchos" que, juntas, forman
+            // el "muchos a muchos". Así se arma siempre.
+
+            entidad.HasData(
+                // Roles:  1 = Administrador,  2 = Gestor,  3 = Cajero
+
+                // Bienvenida la ven todos
+                new { OpcionMenuId = 1, RolId = 1 },
+                new { OpcionMenuId = 1, RolId = 2 },
+                new { OpcionMenuId = 1, RolId = 3 },
+
+                // Dashboard y Usuarios: SOLO administrador
+                new { OpcionMenuId = 2, RolId = 1 },
+                new { OpcionMenuId = 3, RolId = 1 },
+
+                // Asignación de turnos: gestor
+                new { OpcionMenuId = 4, RolId = 2 },
+
+                // Procesos de caja y Clientes: cajero
+                new { OpcionMenuId = 5, RolId = 3 },
+                new { OpcionMenuId = 6, RolId = 3 }
+            );
+            // Esas ocho líneas SON los permisos del sistema, y viven
+            // en la base de datos. Cambiar quién ve qué es un UPDATE,
+            // no un cambio de código.
         });
     }
 }

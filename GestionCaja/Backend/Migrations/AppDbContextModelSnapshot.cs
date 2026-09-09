@@ -79,6 +79,142 @@ namespace Backend.Migrations
                     b.ToTable("Clientes");
                 });
 
+            modelBuilder.Entity("Backend.Models.OpcionMenu", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Etiqueta")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Ruta")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OpcionesMenu");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            Etiqueta = "Bienvenida",
+                            Orden = 1,
+                            Ruta = "/bienvenida"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Activo = true,
+                            Etiqueta = "Dashboard",
+                            Orden = 2,
+                            Ruta = "/dashboard"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Activo = true,
+                            Etiqueta = "Usuarios",
+                            Orden = 3,
+                            Ruta = "/usuarios"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Activo = true,
+                            Etiqueta = "Asignación de turnos",
+                            Orden = 4,
+                            Ruta = "/turnos"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Activo = true,
+                            Etiqueta = "Procesos de caja",
+                            Orden = 5,
+                            Ruta = "/caja"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Activo = true,
+                            Etiqueta = "Clientes",
+                            Orden = 6,
+                            Ruta = "/clientes/nuevo"
+                        });
+                });
+
+            modelBuilder.Entity("Backend.Models.OpcionMenuRol", b =>
+                {
+                    b.Property<int>("OpcionMenuId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RolId")
+                        .HasColumnType("int");
+
+                    b.HasKey("OpcionMenuId", "RolId");
+
+                    b.HasIndex("RolId");
+
+                    b.ToTable("OpcionesMenuRoles");
+
+                    b.HasData(
+                        new
+                        {
+                            OpcionMenuId = 1,
+                            RolId = 1
+                        },
+                        new
+                        {
+                            OpcionMenuId = 1,
+                            RolId = 2
+                        },
+                        new
+                        {
+                            OpcionMenuId = 1,
+                            RolId = 3
+                        },
+                        new
+                        {
+                            OpcionMenuId = 2,
+                            RolId = 1
+                        },
+                        new
+                        {
+                            OpcionMenuId = 3,
+                            RolId = 1
+                        },
+                        new
+                        {
+                            OpcionMenuId = 4,
+                            RolId = 2
+                        },
+                        new
+                        {
+                            OpcionMenuId = 5,
+                            RolId = 3
+                        },
+                        new
+                        {
+                            OpcionMenuId = 6,
+                            RolId = 3
+                        });
+                });
+
             modelBuilder.Entity("Backend.Models.Rol", b =>
                 {
                     b.Property<int>("Id")
@@ -168,6 +304,25 @@ namespace Backend.Migrations
                     b.ToTable("Usuarios");
                 });
 
+            modelBuilder.Entity("Backend.Models.OpcionMenuRol", b =>
+                {
+                    b.HasOne("Backend.Models.OpcionMenu", "OpcionMenu")
+                        .WithMany("Roles")
+                        .HasForeignKey("OpcionMenuId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Rol", "Rol")
+                        .WithMany("OpcionesMenu")
+                        .HasForeignKey("RolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OpcionMenu");
+
+                    b.Navigation("Rol");
+                });
+
             modelBuilder.Entity("Backend.Models.Usuario", b =>
                 {
                     b.HasOne("Backend.Models.Rol", "Rol")
@@ -179,8 +334,15 @@ namespace Backend.Migrations
                     b.Navigation("Rol");
                 });
 
+            modelBuilder.Entity("Backend.Models.OpcionMenu", b =>
+                {
+                    b.Navigation("Roles");
+                });
+
             modelBuilder.Entity("Backend.Models.Rol", b =>
                 {
+                    b.Navigation("OpcionesMenu");
+
                     b.Navigation("Usuarios");
                 });
 #pragma warning restore 612, 618

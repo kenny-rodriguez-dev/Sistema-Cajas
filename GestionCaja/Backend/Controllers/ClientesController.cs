@@ -10,7 +10,7 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]// ClientesController -> /api/clientes
+[Authorize(Roles = "Cajero")]
 public class ClientesController : ControllerBase
 {
     private readonly AppDbContext _contexto;

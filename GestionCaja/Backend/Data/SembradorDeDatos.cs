@@ -5,52 +5,74 @@ namespace Backend.Data;
 
 public static class SembradorDeDatos
 {
-    // "static" = no hace falta crear un objeto para usarla.
-    // Se llama directo: SembradorDeDatos.SembrarAsync(...)
-
     public static async Task SembrarAsync(AppDbContext contexto)
     {
-        bool yaHayAdministrador = await contexto.Usuarios
-            .AnyAsync(u => u.RolId == 1);
-
-        if (yaHayAdministrador) return;
-        // ESTA LÍNEA ES LA IMPORTANTE.
+        // ═══ ¿POR QUÉ LOS USUARIOS NO VAN EN HasData COMO LOS ROLES? ═══
         //
-        // El seeder corre cada vez que arrancas la aplicación. Sin este
-        // "return", crearías un admin nuevo en cada F5 hasta llenar la tabla.
+        // Porque la contraseña hay que hashearla, y BCrypt genera un salt
+        // distinto cada vez: el mismo "Admin1234" produce un hash diferente
+        // en cada ejecución. Ya lo comprobaste en la rebanada 2A.
         //
-        // La palabra técnica es IDEMPOTENTE: se puede correr mil veces
-        // y el resultado es el mismo que correrlo una.
+        // HasData necesita valores FIJOS: compara lo que hay con lo que
+        // debería haber para decidir si algo cambió. Con un hash distinto
+        // cada vez, EF creería que el usuario cambió en cada migración.
+        //
+        // Regla: HasData para catálogos fijos; sembrador para lo que se
+        // calcula al momento.
 
-        var admin = new Usuario
+        if (await contexto.Usuarios.AnyAsync()) return;
+        // Idempotente: si ya hay usuarios, no hace nada.
+
+        var usuarios = new List<Usuario>
         {
-            Username = "admin0001",
-            // Cumple las reglas del enunciado: 9 caracteres (entre 8 y 20),
-            // letras, al menos un número, sin caracteres especiales.
-
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin1234"),
-            // AQUÍ OCURRE LA MAGIA.
-            //
-            // Escribo la contraseña legible UNA sola vez, aquí, y lo que
-            // se guarda es algo como:
-            //   $2a$11$N9qo8uLOickgx2ZMRZoMye/Ci0.9kJq...
-            //
-            // Un hash es de un solo sentido: no existe función que me
-            // devuelva "Admin1234" a partir de ese texto. Si alguien roba
-            // tu base de datos, se lleva basura ilegible.
-
-            Correo = "admin@gestioncaja.com",
-            RolId = 1,
-            Activo = true,
-            Aprobado = true
-            // Aprobado en true: el primer admin no tiene quién lo apruebe.
+            new Usuario
+            {
+                Username = "admin0001",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin1234"),
+                Correo = "admin@gestioncaja.com",
+                RolId = 1,
+                Activo = true,
+                Aprobado = true
+            },
+            new Usuario
+            {
+                Username = "gestor0001",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Gestor1234"),
+                Correo = "gestor@gestioncaja.com",
+                RolId = 2,
+                Activo = true,
+                Aprobado = true
+            },
+            new Usuario
+            {
+                Username = "cajero0001",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Cajero1234"),
+                Correo = "cajero@gestioncaja.com",
+                RolId = 3,
+                Activo = true,
+                Aprobado = true
+            },
+            new Usuario
+            {
+                Username = "pendiente0001",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Pendiente1234"),
+                Correo = "pendiente@gestioncaja.com",
+                RolId = 3,
+                Activo = true,
+                Aprobado = false
+                // ESTE ES A PROPÓSITO: sirve para probar el rechazo por
+                // falta de aprobación que programaste en la 2B y que
+                // hasta ahora nunca se había ejecutado.
+            }
         };
 
-        contexto.Usuarios.Add(admin);
+        contexto.Usuarios.AddRange(usuarios);
         await contexto.SaveChangesAsync();
 
-        Console.WriteLine(">>> Administrador inicial creado: admin0001 / Admin1234");
-        // Solo para que no se te olvide la contraseña mientras desarrollas.
-        // En un sistema real esto jamás se imprime.
+        Console.WriteLine(">>> Usuarios creados:");
+        Console.WriteLine("    admin0001     / Admin1234");
+        Console.WriteLine("    gestor0001    / Gestor1234");
+        Console.WriteLine("    cajero0001    / Cajero1234");
+        Console.WriteLine("    pendiente0001 / Pendiente1234  (sin aprobar)");
     }
 }

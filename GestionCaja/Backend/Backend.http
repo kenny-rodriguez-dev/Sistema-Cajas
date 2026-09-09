@@ -1,56 +1,41 @@
 @host = http://localhost:5219
 
-### 1. Login CORRECTO -> 200 con el token
+### 1. Login como ADMINISTRADOR
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{
-  "username": "admin0001",
-  "password": "Admin1234"
-}
+{ "username": "admin0001", "password": "Admin1234" }
 
-### 2. Contraseña equivocada -> 401
+### 2. Login como CAJERO
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{
-  "username": "admin0001",
-  "password": "ClaveIncorrecta1"
-}
+{ "username": "cajero0001", "password": "Cajero1234" }
 
-### 3. Usuario que no existe -> 401 CON EL MISMO MENSAJE que el #2
+### 3. Login del usuario SIN APROBAR -> 401 con mensaje específico
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{
-  "username": "fantasma0001",
-  "password": "LoQueSea1234"
-}
+{ "username": "pendiente0001", "password": "Pendiente1234" }
 
-### 4. Campos vacíos -> 400 (ni siquiera llega a mi código)
-POST {{host}}/api/auth/login
-Content-Type: application/json
+### 4. Pega aquí el token del ADMIN (bloque 1)
+@tokenAdmin = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImFkbWluMDAwMSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluaXN0cmFkb3IiLCJqdGkiOiI4ZjlkOGYyNS0xNjYxLTRhNjQtOGFlNS04OThmM2RiZjM4NGIiLCJleHAiOjE3ODg5Njc3ODYsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.Ov8JZDkl3ok-zunVPwzFf6VAzDcPuDPpJsf1Qr1anQo
 
-{
-  "username": "",
-  "password": ""
-}
+### 5. Pega aquí el token del CAJERO (bloque 2)
+@tokenCajero = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiIwOWRjMWY5NS0zODg0LTQxZmQtYWQ5OS0wMGZjYjZhNjA3ZGIiLCJleHAiOjE3ODg5Njc4MTIsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.Q9U-Yw_WE-FygVZg5adpzAtO2LLOvt4mlwi1oB9BAQg
 
-### 5. Clientes SIN token -> 401
+### 6. Menú del ADMIN -> Bienvenida, Dashboard, Usuarios
+GET {{host}}/api/menu
+Authorization: Bearer {{tokenAdmin}}
+
+### 7. Menú del CAJERO -> Bienvenida, Procesos de caja, Clientes
+GET {{host}}/api/menu
+Authorization: Bearer {{tokenCajero}}
+
+### 8. Clientes con token de ADMIN -> 403 (no 401)
 GET {{host}}/api/clientes
+Authorization: Bearer {{tokenAdmin}}
 
-### 6. Guarda el token del login #1 aquí (pega el texto largo)
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImFkbWluMDAwMSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluaXN0cmFkb3IiLCJqdGkiOiI2Y2QyYWYzMy03YzljLTQzMzctODIwYy1mODhiMGM3MjM5YzQiLCJleHAiOjE3ODg5MTQxOTQsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.A40GyOD7JiKpHTGHtlivFG6rG2M8_NYFEqp3qWbhaHM
-
-### 7. Clientes CON token -> 200
+### 9. Clientes con token de CAJERO -> 200
 GET {{host}}/api/clientes
-Authorization: Bearer {{token}}
-
-### 8. Quién soy, según el token
-GET {{host}}/api/auth/yo
-Authorization: Bearer {{token}}
-
-### 9. TOKEN MANIPULADO -> 401
-# Copia tu token y cámbiale UNA sola letra del pedazo del medio
-GET {{host}}/api/clientes
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwhS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImFkbWluMDAwMSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluaXN0cmFkb3IiLCJqdGkiOiI2Y2QyYWYzMy03YzljLTQzMzctODIwYy1mODhiMGM3MjM5YzQiLCJleHAiOjE3ODg5MTQxOTQsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.A40GyOD7JiKpHTGHtlivFG6rG2M8_NYFEqp3qWbhaHM
+Authorization: Bearer {{tokenCajero}}

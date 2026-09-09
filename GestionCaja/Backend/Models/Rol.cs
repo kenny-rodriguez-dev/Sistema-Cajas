@@ -14,4 +14,7 @@ public class Rol
     // que te permite escribir rol.Usuarios y que EF salga a buscarlos.
     //
     // Representa el lado "muchos": un rol tiene muchos usuarios.
+
+    public ICollection<OpcionMenuRol> OpcionesMenu { get; set; } = new List<OpcionMenuRol>();
+    // NUEVA. El otro extremo de la relación muchos a muchos.
 }
