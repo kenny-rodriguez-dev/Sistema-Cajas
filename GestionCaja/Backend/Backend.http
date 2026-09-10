@@ -1,69 +1,86 @@
 @host = http://localhost:5219
 
-# Corre los bloques 1 y 2, copia cada token y pégalo aquí arriba.
-@tokenGestor = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIyIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6Imdlc3RvcjAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJHZXN0b3IiLCJqdGkiOiIzODQyMzdhYy05ZTA0LTQ3Y2EtOTc3NS03MmIyM2Y0Nzc3ZWMiLCJleHAiOjE3ODkwODAxOTksImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.CHeCQFkd1may_KQU1b1JDOXNMdm3Zd8kQxjMw0R71kQ
-@tokenCajero1 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiJkMTk3MmEyOC1jZDM5LTRhOWYtODlhNi1iMjQyMDJkNWRjNzUiLCJleHAiOjE3ODkwODAyMjUsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.jG1gl82nJlAf-meEiFR0RuXhdxbCxK_L7yIsI2kLrTY
+@tokenCajero = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiIwNDU2NzllYy1jNzhmLTQ2OWItYTIyNC1iMjI2ZDAyNDA1ZDgiLCJleHAiOjE3ODkwODU4MDYsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.D5xqcEc1762hmvyCGrjLzc7WK6zaFu-s7W_jqK75R7c
 
-### 1. Login GESTOR
-POST {{host}}/api/auth/login
-Content-Type: application/json
-
-{ "username": "gestor0001", "password": "Gestor1234" }
-
-### 2. Login CAJERO 1
+### 1. Login CAJERO
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
 { "username": "cajero0001", "password": "Cajero1234" }
 
-### 3. Asignar cajero0001 (id 3) a la caja 1
-POST {{host}}/api/cajas/1/asignaciones
-Authorization: Bearer {{tokenGestor}}
+### 2. Crear un cliente
+POST {{host}}/api/clientes
+Authorization: Bearer {{tokenCajero}}
 Content-Type: application/json
 
-{ "usuarioId": 3 }
+{
+  "nombres": "Maria",
+  "apellidos": "Torres",
+  "identificacion": "0955512345",
+  "correo": "maria@ejemplo.com",
+  "telefono": "0991234567",
+  "direccion": "Ciudadela Los Rosales manzana 5 villa 12",
+  "referenciaDireccion": "Frente al parque central junto a la farmacia"
+}
 
-### 4. Turno de Atención al cliente -> AC0001
-POST {{host}}/api/turnos
-Authorization: Bearer {{tokenGestor}}
+### 3. Ver los servicios disponibles
+GET {{host}}/api/contratos/servicios
+Authorization: Bearer {{tokenCajero}}
+
+### 4. Contratar el Básico (50 Mbps) por 12 meses
+POST {{host}}/api/contratos
+Authorization: Bearer {{tokenCajero}}
 Content-Type: application/json
 
-{ "cajaId": 1, "tipoAtencionId": 1 }
+{ "clienteId": 1, "servicioId": 1, "formaPagoId": 1, "mesesDuracion": 12 }
 
-### 5. Otro igual -> AC0002
-POST {{host}}/api/turnos
-Authorization: Bearer {{tokenGestor}}
+### ⭐ ANOTA LA "fechaFin" QUE DEVUELVE ESTE BLOQUE
+
+### 5. Intentar contratar otra vez -> 409
+POST {{host}}/api/contratos
+Authorization: Bearer {{tokenCajero}}
 Content-Type: application/json
 
-{ "cajaId": 1, "tipoAtencionId": 1 }
+{ "clienteId": 1, "servicioId": 2, "formaPagoId": 1, "mesesDuracion": 12 }
 
-### 6. Ahora Pago de servicio -> PS0001 (numeración independiente)
-POST {{host}}/api/turnos
-Authorization: Bearer {{tokenGestor}}
+### 6. ⭐ CAMBIO A MAYOR VELOCIDAD (Premium, 200 Mbps)
+POST {{host}}/api/contratos/1/cambiar-servicio
+Authorization: Bearer {{tokenCajero}}
 Content-Type: application/json
 
-{ "cajaId": 1, "tipoAtencionId": 2 }
+{ "nuevoServicioId": 3 }
 
-### 7. Ver los turnos del día
-GET {{host}}/api/turnos
-Authorization: Bearer {{tokenGestor}}
+### ⭐ COMPARA la "fechaFinConservada" con la del bloque 4: SON IGUALES
 
-### 8. Atender SIN sesión de caja abierta -> 409
-POST {{host}}/api/turnos/1/atender
-Authorization: Bearer {{tokenCajero1}}
+### 7. El historial: contrato 1 en SUS, contrato 2 en REN
+GET {{host}}/api/contratos/cliente/1
+Authorization: Bearer {{tokenCajero}}
 
-### 9. Abrir la caja
-POST {{host}}/api/cajas/1/abrir
-Authorization: Bearer {{tokenCajero1}}
+### 8. Cambiar la forma de pago del contrato 2
+POST {{host}}/api/contratos/2/cambiar-forma-pago
+Authorization: Bearer {{tokenCajero}}
+Content-Type: application/json
 
-### 10. Ahora sí, atender -> 200
-POST {{host}}/api/turnos/1/atender
-Authorization: Bearer {{tokenCajero1}}
+{ "nuevaFormaPagoId": 2 }
 
-### 11. Atender el mismo otra vez -> 404 (ya no está pendiente)
-POST {{host}}/api/turnos/1/atender
-Authorization: Bearer {{tokenCajero1}}
+### 9. Intentar cambiar el contrato SUSTITUIDO -> 409
+POST {{host}}/api/contratos/1/cambiar-servicio
+Authorization: Bearer {{tokenCajero}}
+Content-Type: application/json
 
-### 12. Ver el resultado final
-GET {{host}}/api/turnos
-Authorization: Bearer {{tokenGestor}}
+{ "nuevoServicioId": 2 }
+
+### 10. Cancelar el contrato vigente
+POST {{host}}/api/contratos/2/cancelar
+Authorization: Bearer {{tokenCajero}}
+
+### 11. Historial final: SUS y CAN. La fechaFin del 2 cambió a hoy
+GET {{host}}/api/contratos/cliente/1
+Authorization: Bearer {{tokenCajero}}
+
+### 12. Ahora que no tiene activo, puede contratar de nuevo -> 200
+POST {{host}}/api/contratos
+Authorization: Bearer {{tokenCajero}}
+Content-Type: application/json
+
+{ "clienteId": 1, "servicioId": 2, "formaPagoId": 1, "mesesDuracion": 6 }

@@ -73,6 +73,7 @@ builder.Services.AddCors(opciones =>
 
 builder.Services.AddScoped<IRepositorioCajas, RepositorioCajas>();
 builder.Services.AddScoped<IRepositorioTurnos, RepositorioTurnos>();
+builder.Services.AddScoped<IRepositorioContratos, RepositorioContratos>();
 var app = builder.Build();
 
 // ─── SIEMBRA ─────────────────────────────────────────────────

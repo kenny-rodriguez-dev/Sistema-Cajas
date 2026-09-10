@@ -148,6 +148,164 @@ namespace Infrastructure.Migrations
                     b.ToTable("ContadoresTurno");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Contrato", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ContratoAnteriorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CreadoPorUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime?>("FechaCancelacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaFin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FormaPagoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ServicioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId")
+                        .IsUnique()
+                        .HasFilter("[Estado] IN ('VIG','REN')");
+
+                    b.HasIndex("ContratoAnteriorId");
+
+                    b.HasIndex("CreadoPorUsuarioId");
+
+                    b.HasIndex("FormaPagoId");
+
+                    b.HasIndex("ServicioId");
+
+                    b.ToTable("Contratos", t =>
+                        {
+                            t.HasCheckConstraint("CK_Contrato_Estado", "[Estado] IN ('VIG','SUS','REN','CAN')");
+                        });
+                });
+
+            modelBuilder.Entity("Domain.Entities.Equipo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("ServicioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServicioId");
+
+                    b.ToTable("Equipos");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            Nombre = "Router WiFi 5",
+                            ServicioId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Activo = true,
+                            Nombre = "Router WiFi 6",
+                            ServicioId = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Activo = true,
+                            Nombre = "Router WiFi 6",
+                            ServicioId = 3
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Activo = true,
+                            Nombre = "Repetidor de señal",
+                            ServicioId = 3
+                        });
+                });
+
+            modelBuilder.Entity("Domain.Entities.FormaPago", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FormasPago");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            Descripcion = "Efectivo"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Activo = true,
+                            Descripcion = "Tarjeta de crédito"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Activo = true,
+                            Descripcion = "Débito bancario"
+                        });
+                });
+
             modelBuilder.Entity("Domain.Entities.OpcionMenu", b =>
                 {
                     b.Property<int>("Id")
@@ -319,6 +477,68 @@ namespace Infrastructure.Migrations
                         {
                             Id = 3,
                             Nombre = "Cajero"
+                        });
+                });
+
+            modelBuilder.Entity("Domain.Entities.Servicio", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Precio")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("VelocidadMbps")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Servicios");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            Descripcion = "Plan hogar de entrada",
+                            Nombre = "Internet Básico",
+                            Precio = 20.00m,
+                            VelocidadMbps = 50
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Activo = true,
+                            Descripcion = "Plan hogar intermedio",
+                            Nombre = "Internet Plus",
+                            Precio = 30.00m,
+                            VelocidadMbps = 100
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Activo = true,
+                            Descripcion = "Plan hogar de alta velocidad",
+                            Nombre = "Internet Premium",
+                            Precio = 45.00m,
+                            VelocidadMbps = 200
                         });
                 });
 
@@ -547,6 +767,59 @@ namespace Infrastructure.Migrations
                     b.Navigation("TipoAtencion");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Contrato", b =>
+                {
+                    b.HasOne("Domain.Entities.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Contrato", "ContratoAnterior")
+                        .WithMany()
+                        .HasForeignKey("ContratoAnteriorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.Usuario", "CreadoPorUsuario")
+                        .WithMany()
+                        .HasForeignKey("CreadoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.FormaPago", "FormaPago")
+                        .WithMany()
+                        .HasForeignKey("FormaPagoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Servicio", "Servicio")
+                        .WithMany()
+                        .HasForeignKey("ServicioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("ContratoAnterior");
+
+                    b.Navigation("CreadoPorUsuario");
+
+                    b.Navigation("FormaPago");
+
+                    b.Navigation("Servicio");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Equipo", b =>
+                {
+                    b.HasOne("Domain.Entities.Servicio", "Servicio")
+                        .WithMany("Equipos")
+                        .HasForeignKey("ServicioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Servicio");
+                });
+
             modelBuilder.Entity("Domain.Entities.OpcionMenuRol", b =>
                 {
                     b.HasOne("Domain.Entities.OpcionMenu", "OpcionMenu")
@@ -656,6 +929,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("OpcionesMenu");
 
                     b.Navigation("Usuarios");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Servicio", b =>
+                {
+                    b.Navigation("Equipos");
                 });
 
             modelBuilder.Entity("Domain.Entities.TipoAtencion", b =>

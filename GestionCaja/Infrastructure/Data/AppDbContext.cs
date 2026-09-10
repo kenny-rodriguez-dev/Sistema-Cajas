@@ -20,6 +20,10 @@ public class AppDbContext : DbContext
     public DbSet<TipoAtencion> TiposAtencion => Set<TipoAtencion>();
     public DbSet<ContadorTurno> ContadoresTurno => Set<ContadorTurno>();
     public DbSet<Turno> Turnos => Set<Turno>();
+    public DbSet<Servicio> Servicios => Set<Servicio>();
+    public DbSet<Equipo> Equipos => Set<Equipo>();
+    public DbSet<FormaPago> FormasPago => Set<FormaPago>();
+    public DbSet<Contrato> Contratos => Set<Contrato>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -177,6 +181,94 @@ public class AppDbContext : DbContext
             // Tres relaciones distintas hacia Usuario desde la misma tabla.
             // Por eso hay que escribirlas explícitas: EF no puede adivinar
             // cuál llave foránea corresponde a cuál navegación.
+        });
+
+        // ─── SERVICIO ───
+        modelo.Entity<Servicio>(entidad =>
+        {
+            entidad.Property(s => s.Nombre).HasMaxLength(100).IsRequired();
+            entidad.Property(s => s.Descripcion).HasMaxLength(150).IsRequired();
+
+            entidad.Property(s => s.Precio).HasPrecision(10, 2);
+            // 10 dígitos en total, 2 después del punto.
+            // Sin esto, EF crea el campo como decimal(18,2) por defecto,
+            // que funciona pero es más grande de lo necesario.
+
+            entidad.HasData(
+                new Servicio { Id = 1, Nombre = "Internet Básico", Descripcion = "Plan hogar de entrada", VelocidadMbps = 50, Precio = 20.00m, Activo = true },
+                new Servicio { Id = 2, Nombre = "Internet Plus", Descripcion = "Plan hogar intermedio", VelocidadMbps = 100, Precio = 30.00m, Activo = true },
+                new Servicio { Id = 3, Nombre = "Internet Premium", Descripcion = "Plan hogar de alta velocidad", VelocidadMbps = 200, Precio = 45.00m, Activo = true }
+            );
+            // La "m" al final del número le dice a C# que es decimal.
+            // Sin ella lo interpretaría como double y no compilaría.
+        });
+
+        // ─── EQUIPO ───
+        modelo.Entity<Equipo>(entidad =>
+        {
+            entidad.Property(e => e.Nombre).HasMaxLength(50).IsRequired();
+            entidad.HasOne(e => e.Servicio).WithMany(s => s.Equipos)
+                   .HasForeignKey(e => e.ServicioId).OnDelete(DeleteBehavior.Restrict);
+
+            entidad.HasData(
+                new Equipo { Id = 1, Nombre = "Router WiFi 5", ServicioId = 1, Activo = true },
+                new Equipo { Id = 2, Nombre = "Router WiFi 6", ServicioId = 2, Activo = true },
+                new Equipo { Id = 3, Nombre = "Router WiFi 6", ServicioId = 3, Activo = true },
+                new Equipo { Id = 4, Nombre = "Repetidor de señal", ServicioId = 3, Activo = true }
+            );
+        });
+
+        // ─── FORMA DE PAGO ───
+        modelo.Entity<FormaPago>(entidad =>
+        {
+            entidad.Property(f => f.Descripcion).HasMaxLength(50).IsRequired();
+            entidad.HasData(
+                new FormaPago { Id = 1, Descripcion = "Efectivo", Activo = true },
+                new FormaPago { Id = 2, Descripcion = "Tarjeta de crédito", Activo = true },
+                new FormaPago { Id = 3, Descripcion = "Débito bancario", Activo = true }
+            );
+        });
+
+        // ─── CONTRATO ───
+        modelo.Entity<Contrato>(entidad =>
+        {
+            entidad.Property(c => c.Estado).HasMaxLength(3).IsRequired().IsFixedLength();
+
+            entidad.ToTable(t => t.HasCheckConstraint(
+                "CK_Contrato_Estado",
+                "[Estado] IN ('VIG','SUS','REN','CAN')"
+            ));
+
+            entidad.HasIndex(c => c.ClienteId)
+                   .IsUnique()
+                   .HasFilter("[Estado] IN ('VIG','REN')");
+            // ═══ EL MISMO TRUCO DE LA REBANADA 4A ═══
+            //
+            // Índice único filtrado: un cliente NO puede tener dos
+            // contratos activos a la vez. Los sustituidos y cancelados
+            // no cuentan, porque el filtro los excluye.
+            //
+            // Y como en la sesión de caja, esto es lo que hace que la
+            // regla se cumpla de verdad: dos cajeros contratando para
+            // el mismo cliente en el mismo instante no pueden crear
+            // dos contratos vigentes. SQL Server lo impide.
+
+            entidad.HasOne(c => c.Cliente).WithMany()
+                   .HasForeignKey(c => c.ClienteId).OnDelete(DeleteBehavior.Restrict);
+
+            entidad.HasOne(c => c.Servicio).WithMany()
+                   .HasForeignKey(c => c.ServicioId).OnDelete(DeleteBehavior.Restrict);
+
+            entidad.HasOne(c => c.FormaPago).WithMany()
+                   .HasForeignKey(c => c.FormaPagoId).OnDelete(DeleteBehavior.Restrict);
+
+            entidad.HasOne(c => c.CreadoPorUsuario).WithMany()
+                   .HasForeignKey(c => c.CreadoPorUsuarioId).OnDelete(DeleteBehavior.Restrict);
+
+            entidad.HasOne(c => c.ContratoAnterior).WithMany()
+                   .HasForeignKey(c => c.ContratoAnteriorId).OnDelete(DeleteBehavior.Restrict);
+            // La relación consigo misma. EF la maneja igual que
+            // cualquier otra, solo que ambos extremos son la misma tabla.
         });
     }
 }
