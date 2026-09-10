@@ -1,41 +1,69 @@
 @host = http://localhost:5219
 
-### 1. Login como ADMINISTRADOR
+# Corre los bloques 1 y 2, copia cada token y pégalo aquí arriba.
+@tokenGestor = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIyIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6Imdlc3RvcjAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJHZXN0b3IiLCJqdGkiOiIzODQyMzdhYy05ZTA0LTQ3Y2EtOTc3NS03MmIyM2Y0Nzc3ZWMiLCJleHAiOjE3ODkwODAxOTksImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.CHeCQFkd1may_KQU1b1JDOXNMdm3Zd8kQxjMw0R71kQ
+@tokenCajero1 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiJkMTk3MmEyOC1jZDM5LTRhOWYtODlhNi1iMjQyMDJkNWRjNzUiLCJleHAiOjE3ODkwODAyMjUsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.jG1gl82nJlAf-meEiFR0RuXhdxbCxK_L7yIsI2kLrTY
+
+### 1. Login GESTOR
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{ "username": "admin0001", "password": "Admin1234" }
+{ "username": "gestor0001", "password": "Gestor1234" }
 
-### 2. Login como CAJERO
+### 2. Login CAJERO 1
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
 { "username": "cajero0001", "password": "Cajero1234" }
 
-### 3. Login del usuario SIN APROBAR -> 401 con mensaje específico
-POST {{host}}/api/auth/login
+### 3. Asignar cajero0001 (id 3) a la caja 1
+POST {{host}}/api/cajas/1/asignaciones
+Authorization: Bearer {{tokenGestor}}
 Content-Type: application/json
 
-{ "username": "pendiente0001", "password": "Pendiente1234" }
+{ "usuarioId": 3 }
 
-### 4. Pega aquí el token del ADMIN (bloque 1)
-@tokenAdmin = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImFkbWluMDAwMSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluaXN0cmFkb3IiLCJqdGkiOiI4ZjlkOGYyNS0xNjYxLTRhNjQtOGFlNS04OThmM2RiZjM4NGIiLCJleHAiOjE3ODg5Njc3ODYsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.Ov8JZDkl3ok-zunVPwzFf6VAzDcPuDPpJsf1Qr1anQo
+### 4. Turno de Atención al cliente -> AC0001
+POST {{host}}/api/turnos
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
 
-### 5. Pega aquí el token del CAJERO (bloque 2)
-@tokenCajero = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiIwOWRjMWY5NS0zODg0LTQxZmQtYWQ5OS0wMGZjYjZhNjA3ZGIiLCJleHAiOjE3ODg5Njc4MTIsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.Q9U-Yw_WE-FygVZg5adpzAtO2LLOvt4mlwi1oB9BAQg
+{ "cajaId": 1, "tipoAtencionId": 1 }
 
-### 6. Menú del ADMIN -> Bienvenida, Dashboard, Usuarios
-GET {{host}}/api/menu
-Authorization: Bearer {{tokenAdmin}}
+### 5. Otro igual -> AC0002
+POST {{host}}/api/turnos
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
 
-### 7. Menú del CAJERO -> Bienvenida, Procesos de caja, Clientes
-GET {{host}}/api/menu
-Authorization: Bearer {{tokenCajero}}
+{ "cajaId": 1, "tipoAtencionId": 1 }
 
-### 8. Clientes con token de ADMIN -> 403 (no 401)
-GET {{host}}/api/clientes
-Authorization: Bearer {{tokenAdmin}}
+### 6. Ahora Pago de servicio -> PS0001 (numeración independiente)
+POST {{host}}/api/turnos
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
 
-### 9. Clientes con token de CAJERO -> 200
-GET {{host}}/api/clientes
-Authorization: Bearer {{tokenCajero}}
+{ "cajaId": 1, "tipoAtencionId": 2 }
+
+### 7. Ver los turnos del día
+GET {{host}}/api/turnos
+Authorization: Bearer {{tokenGestor}}
+
+### 8. Atender SIN sesión de caja abierta -> 409
+POST {{host}}/api/turnos/1/atender
+Authorization: Bearer {{tokenCajero1}}
+
+### 9. Abrir la caja
+POST {{host}}/api/cajas/1/abrir
+Authorization: Bearer {{tokenCajero1}}
+
+### 10. Ahora sí, atender -> 200
+POST {{host}}/api/turnos/1/atender
+Authorization: Bearer {{tokenCajero1}}
+
+### 11. Atender el mismo otra vez -> 404 (ya no está pendiente)
+POST {{host}}/api/turnos/1/atender
+Authorization: Bearer {{tokenCajero1}}
+
+### 12. Ver el resultado final
+GET {{host}}/api/turnos
+Authorization: Bearer {{tokenGestor}}

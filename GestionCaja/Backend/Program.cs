@@ -1,17 +1,20 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Application.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Application.Interfaces;
-using Infrastructure.Repositories;
+// Los using ya reflejan las cuatro capas.
+// Fíjate que Backend conoce a todas: es la capa de más afuera.
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ─── MITAD 1: REGISTRO ──────────────────────────────────────
+// ╔═══════════════════════════════════════════════════════════╗
+// ║  MITAD 1: REGISTRO                                        ║
+// ║  TODO lo que empiece con builder.Services va AQUÍ.        ║
+// ╚═══════════════════════════════════════════════════════════╝
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -23,32 +26,26 @@ builder.Services.AddDbContext<AppDbContext>(opciones =>
 );
 
 builder.Services.AddScoped<ServicioDeTokens>();
-// Registro mi servicio para poder pedirlo en el constructor del controlador.
-// Sin esta línea, .NET no sabría fabricarlo y la app reventaría al arrancar
-// con "Unable to resolve service".
-//
-// Scoped = uno nuevo por cada petición HTTP.
 
-// ─── AUTENTICACIÓN ───
+builder.Services.AddScoped<IRepositorioClientes, RepositorioClientes>();
+// ↑ ESTA ES LA QUE ESTABA MAL UBICADA.
+//   Tiene que estar aquí arriba, con las demás.
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opciones =>
     {
         opciones.TokenValidationParameters = new TokenValidationParameters
         {
-            // Estas son las preguntas que .NET le hará a CADA token que llegue.
-            ValidateIssuerSigningKey = true,   // ¿la firma es mía?
+            ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Clave"]!)
             ),
-            ValidateIssuer = true,             // ¿lo emití yo?
+            ValidateIssuer = true,
             ValidIssuer = builder.Configuration["Jwt:Emisor"],
-            ValidateAudience = true,           // ¿es para mi frontend?
+            ValidateAudience = true,
             ValidAudience = builder.Configuration["Jwt:Audiencia"],
-            ValidateLifetime = true,           // ¿no ha expirado?
+            ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
-            // Por defecto .NET perdona 5 minutos de desfase de reloj.
-            // Para desarrollo lo pongo en cero para que la expiración
-            // sea exacta y puedas probarla sin esperar de más.
         };
     });
 
@@ -67,16 +64,16 @@ builder.Services.AddCors(opciones =>
     });
 });
 
-var app = builder.Build();
+// ╔═══════════════════════════════════════════════════════════╗
+// ║  ══════════════  LA FRONTERA  ══════════════              ║
+// ║  Aquí la caja de herramientas se CIERRA.                  ║
+// ║  Cualquier builder.Services debajo de esta línea          ║
+// ║  revienta con "collection is read-only".                  ║
+// ╚═══════════════════════════════════════════════════════════╝
 
-builder.Services.AddScoped<IRepositorioClientes, RepositorioClientes>();
-// SE LEE ASÍ: "cuando alguien pida un IRepositorioClientes,
-//              entrégale un RepositorioClientes".
-//
-// ESTA LÍNEA ES EL PEGAMENTO DE TODA LA ARQUITECTURA.
-// Es el único lugar de todo el proyecto donde la interfaz y su
-// implementación se tocan. Cambia esta sola línea y todo el sistema
-// pasa a usar otra base de datos, sin tocar nada más.
+builder.Services.AddScoped<IRepositorioCajas, RepositorioCajas>();
+builder.Services.AddScoped<IRepositorioTurnos, RepositorioTurnos>();
+var app = builder.Build();
 
 // ─── SIEMBRA ─────────────────────────────────────────────────
 
@@ -85,8 +82,13 @@ using (var alcance = app.Services.CreateScope())
     var contexto = alcance.ServiceProvider.GetRequiredService<AppDbContext>();
     await SembradorDeDatos.SembrarAsync(contexto);
 }
+// Fíjate que aquí NO registro nada: solo PIDO algo que ya estaba
+// registrado. Pedir sí se puede después de la frontera; registrar no.
 
-// ─── MITAD 2: LA TUBERÍA ────────────────────────────────────
+// ╔═══════════════════════════════════════════════════════════╗
+// ║  MITAD 2: LA TUBERÍA                                      ║
+// ║  TODO lo que empiece con app. va AQUÍ.                    ║
+// ╚═══════════════════════════════════════════════════════════╝
 
 if (app.Environment.IsDevelopment())
 {
@@ -96,15 +98,6 @@ if (app.Environment.IsDevelopment())
 app.UseCors(PoliticaCors);
 app.UseAuthentication();
 app.UseAuthorization();
-// ═══ ESTE ORDEN NO SE TOCA. Es lo que te advertí hace tres mensajes. ═══
-//
-// CORS primero: el preflight OPTIONS viaja SIN token. Si Authentication
-// fuera antes, lo cortaría con un 401, la respuesta nunca pasaría por CORS,
-// y el navegador te reportaría... un error de CORS. Buscarías el problema
-// en el lugar equivocado durante horas.
-//
-// Authentication antes que Authorization, por razones obvias:
-// primero "¿quién eres?", después "¿puedes hacer esto?".
 
 app.MapControllers();
 

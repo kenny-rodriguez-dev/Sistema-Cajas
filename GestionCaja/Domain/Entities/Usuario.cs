@@ -56,4 +56,8 @@ public class Usuario
     // el flujo de aprobación de verdad.
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+    public ICollection<AsignacionCaja> Asignaciones { get; set; } = new List<AsignacionCaja>();
+    public ICollection<SesionCaja> Sesiones { get; set; } = new List<SesionCaja>();
+
 }
