@@ -1,6 +1,6 @@
 @host = http://localhost:5219
 
-@tokenCajero = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiIwNDU2NzllYy1jNzhmLTQ2OWItYTIyNC1iMjI2ZDAyNDA1ZDgiLCJleHAiOjE3ODkwODU4MDYsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.D5xqcEc1762hmvyCGrjLzc7WK6zaFu-s7W_jqK75R7c
+@tokenCajero = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiJkODUyZWQ3MC1jYzgwLTQ1ZTYtYjUyYS1jMDFiZDMwOTNhNWIiLCJleHAiOjE3ODkxNDg2MjksImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.qXNLraAAQa0Bue_DoScU_l8pkFDq54gq9b8a227T5mQ
 
 ### 1. Login CAJERO
 POST {{host}}/api/auth/login
@@ -84,3 +84,17 @@ Authorization: Bearer {{tokenCajero}}
 Content-Type: application/json
 
 { "clienteId": 1, "servicioId": 2, "formaPagoId": 1, "mesesDuracion": 6 }
+
+
+### El editor .http de Visual Studio no soporta adjuntar archivos
+### Carga masiva de clientes
+POST {{host}}/api/clientes/carga-masiva
+Authorization: Bearer {{tokenCajero}}
+Content-Type: multipart/form-data; boundary=LIMITE
+
+--LIMITE
+Content-Disposition: form-data; name="archivo"; filename="clientes.xlsx"
+Content-Type: application/octet-stream
+
+< ./clientes.xlsx
+--LIMITE--

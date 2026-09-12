@@ -21,4 +21,7 @@ public interface IRepositorioClientes
     Task AgregarAsync(Cliente cliente);
     // Solo firmas de métodos, sin cuerpo. Una interfaz es una promesa:
     // "quien implemente esto, tiene que saber hacer estas cuatro cosas".
+
+    Task<List<string>> ObtenerIdentificacionesAsync(List<string> identificaciones);
+    Task AgregarVariosAsync(List<Cliente> clientes);
 }

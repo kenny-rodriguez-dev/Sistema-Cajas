@@ -42,4 +42,25 @@ public class RepositorioClientes : IRepositorioClientes
         _contexto.Clientes.Add(cliente);
         await _contexto.SaveChangesAsync();
     }
+
+    public async Task<List<string>> ObtenerIdentificacionesAsync(List<string> identificaciones) =>
+    await _contexto.Clientes
+        .Where(c => identificaciones.Contains(c.Identificacion))
+        .Select(c => c.Identificacion)
+        .ToListAsync();
+    // ═══ UNA SOLA CONSULTA, NO UNA POR FILA ═══
+    //
+    // Lo ingenuo sería recorrer las 500 filas preguntando una por una:
+    // 500 viajes a la base de datos.
+    //
+    // Contains() se traduce a "WHERE Identificacion IN (...)": UN viaje.
+    // Ese problema tiene nombre y te lo van a preguntar: N+1 queries.
+
+    public async Task AgregarVariosAsync(List<Cliente> clientes)
+    {
+        _contexto.Clientes.AddRange(clientes);
+        await _contexto.SaveChangesAsync();
+        // AddRange + un solo SaveChanges = EF agrupa todos los INSERT
+        // en una sola transacción. Si uno falla, no entra ninguno.
+    }
 }

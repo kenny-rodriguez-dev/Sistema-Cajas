@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Domain.Entities;
+﻿using Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Infrastructure.Data;
 
@@ -74,7 +76,8 @@ public class AppDbContext : DbContext
                 new OpcionMenu { Id = 3, Etiqueta = "Usuarios", Ruta = "/usuarios", Orden = 3, Activo = true },
                 new OpcionMenu { Id = 4, Etiqueta = "Asignación de turnos", Ruta = "/turnos", Orden = 4, Activo = true },
                 new OpcionMenu { Id = 5, Etiqueta = "Procesos de caja", Ruta = "/caja", Orden = 5, Activo = true },
-                new OpcionMenu { Id = 6, Etiqueta = "Clientes", Ruta = "/clientes/nuevo", Orden = 6, Activo = true }
+                new OpcionMenu { Id = 6, Etiqueta = "Clientes", Ruta = "/clientes/nuevo", Orden = 6, Activo = true },
+                new OpcionMenu { Id = 7, Etiqueta = "Carga masiva", Ruta = "/clientes/carga", Orden = 7, Activo = true }
             );
         });
 
@@ -87,7 +90,8 @@ public class AppDbContext : DbContext
                 new { OpcionMenuId = 1, RolId = 1 }, new { OpcionMenuId = 1, RolId = 2 },
                 new { OpcionMenuId = 1, RolId = 3 }, new { OpcionMenuId = 2, RolId = 1 },
                 new { OpcionMenuId = 3, RolId = 1 }, new { OpcionMenuId = 4, RolId = 2 },
-                new { OpcionMenuId = 5, RolId = 3 }, new { OpcionMenuId = 6, RolId = 3 }
+                new { OpcionMenuId = 5, RolId = 3 }, new { OpcionMenuId = 6, RolId = 3 },
+                new { OpcionMenuId = 7, RolId = 3 }
             );
         });
 
@@ -271,4 +275,45 @@ public class AppDbContext : DbContext
             // cualquier otra, solo que ambos extremos son la misma tabla.
         });
     }
+    protected override void ConfigureConventions(ModelConfigurationBuilder configuracion)
+    {
+        configuracion.Properties<DateTime>().HaveConversion<ConvertidorFechaUtc>();
+        configuracion.Properties<DateTime?>().HaveConversion<ConvertidorFechaUtcNullable>();
+        // "Para TODA propiedad DateTime del sistema, aplica este convertidor."
+        //
+        // Una convención global: no hay que acordarse de configurarlo
+        // entidad por entidad. Todas las fechas nuevas que agregues en
+        // el futuro quedan cubiertas automáticamente.
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   Los convertidores van FUERA de la clase, en el mismo archivo
+// ═══════════════════════════════════════════════════════════════
+
+public class ConvertidorFechaUtc : ValueConverter<DateTime, DateTime>
+{
+    public ConvertidorFechaUtc() : base(
+        fecha => fecha.ToUniversalTime(),
+        // ↑ AL GUARDAR: asegúrate de que va en hora universal
+
+        fecha => DateTime.SpecifyKind(fecha, DateTimeKind.Utc)
+        // ↑ AL LEER: márcala como Utc.
+        //
+        // SpecifyKind NO cambia la hora. Solo le pega la etiqueta que
+        // SQL Server no pudo guardar. Es decirle a .NET: "esta hora que
+        // acabas de leer, créeme, ya está en UTC".
+    )
+    { }
+}
+
+public class ConvertidorFechaUtcNullable : ValueConverter<DateTime?, DateTime?>
+{
+    public ConvertidorFechaUtcNullable() : base(
+        fecha => fecha.HasValue ? fecha.Value.ToUniversalTime() : fecha,
+        fecha => fecha.HasValue ? DateTime.SpecifyKind(fecha.Value, DateTimeKind.Utc) : fecha
+    )
+    { }
+    // Uno aparte para las fechas que aceptan null (FechaCierre,
+    // FechaCancelacion). El "?" las hace un tipo distinto para C#.
 }

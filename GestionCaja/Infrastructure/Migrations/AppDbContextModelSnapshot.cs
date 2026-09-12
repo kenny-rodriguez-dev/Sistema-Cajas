@@ -382,6 +382,14 @@ namespace Infrastructure.Migrations
                             Etiqueta = "Clientes",
                             Orden = 6,
                             Ruta = "/clientes/nuevo"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Activo = true,
+                            Etiqueta = "Carga masiva",
+                            Orden = 7,
+                            Ruta = "/clientes/carga"
                         });
                 });
 
@@ -438,6 +446,11 @@ namespace Infrastructure.Migrations
                         new
                         {
                             OpcionMenuId = 6,
+                            RolId = 3
+                        },
+                        new
+                        {
+                            OpcionMenuId = 7,
                             RolId = 3
                         });
                 });

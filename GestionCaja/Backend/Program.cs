@@ -74,6 +74,9 @@ builder.Services.AddCors(opciones =>
 builder.Services.AddScoped<IRepositorioCajas, RepositorioCajas>();
 builder.Services.AddScoped<IRepositorioTurnos, RepositorioTurnos>();
 builder.Services.AddScoped<IRepositorioContratos, RepositorioContratos>();
+builder.Services.AddScoped<ILectorClientesArchivo, LectorClientesExcel>();
+builder.Services.AddScoped<IRepositorioDashboard, RepositorioDashboard>();
+builder.Services.AddScoped<IRepositorioUsuarios, RepositorioUsuarios>();
 var app = builder.Build();
 
 // ─── SIEMBRA ─────────────────────────────────────────────────
