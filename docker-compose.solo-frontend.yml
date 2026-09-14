@@ -1,0 +1,60 @@
+# ESCENARIO B: frontend y base en Docker, backend LOCAL (F5 en Visual Studio)
+#
+# Aqui esta el detalle que casi nadie sabe explicar, comentado abajo.
+
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: gestioncaja-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Password123!"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - datos-sqlserver:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Password123!' -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://localhost:5219"
+        # ↑ EL PUERTO DE TU BACKEND LOCAL. Ajustalo al tuyo.
+        #
+        # ═══ LA PREGUNTA QUE VALE ═══
+        # "El frontend esta en un contenedor y el backend esta en tu PC.
+        #  Entonces necesita host.docker.internal, no?"
+        #
+        # NO, y este es el punto. El fetch de tu pagina de login lo hace
+        # REACT EN EL NAVEGADOR, y el navegador corre en TU PC, fuera del
+        # contenedor. Para el, localhost:5266 ES tu backend local.
+        #
+        # El contenedor solo sirve los archivos de la pagina. No es quien
+        # hace la llamada.
+        #
+        # CUANDO SI HARIA FALTA host.docker.internal:
+        # si el fetch lo hiciera el SERVIDOR de Next.js (un Server
+        # Component o un route handler). Esa llamada si sale desde dentro
+        # del contenedor, y ahi localhost seria el contenedor mismo.
+        #
+        # Toda tu app usa 'use client', asi que no es el caso.
+    container_name: gestioncaja-frontend
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      # En Windows y Mac este nombre ya viene resuelto.
+      # En Linux hay que agregarlo a mano. Lo dejo puesto para que
+      # el archivo funcione en cualquier sistema.
+
+volumes:
+  datos-sqlserver:

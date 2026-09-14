@@ -1,0 +1,54 @@
+# ESCENARIO A: backend y base en Docker, frontend LOCAL (npm run dev)
+#
+# El frontend corre en tu PC y llama al backend por localhost:5000,
+# que funciona porque el puerto esta publicado.
+
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: gestioncaja-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Password123!"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - datos-sqlserver:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Password123!' -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./GestionCaja
+      dockerfile: Backend/Dockerfile
+    container_name: gestioncaja-backend
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__BaseDeDatos: "Server=sqlserver,1433;Database=GestionCaja;User Id=sa;Password=Password123!;TrustServerCertificate=True"
+      # El backend SIGUE hablandole a la base por nombre de servicio:
+      # los dos estan dentro de la misma red de Docker.
+      Jwt__Clave: "clave-de-docker-larga-de-mas-de-32-caracteres-cambiar-en-produccion"
+      Jwt__Emisor: "GestionCajaApi"
+      Jwt__Audiencia: "GestionCajaFrontend"
+      Jwt__MinutosDeVida: "60"
+      FrontendUrl: "http://localhost:3000"
+      # CORS: el frontend local corre en el 3000 de tu PC.
+      # Fijate que esta linea NO cambia respecto al compose completo,
+      # y hay una razon: el navegador siempre estuvo fuera de Docker.
+      # Para CORS, da igual donde corra el frontend.
+    ports:
+      - "5000:8080"
+      # Publicar este puerto es lo que hace posible todo el escenario.
+      # Sin esta linea, tu frontend local no tendria como llegar.
+
+volumes:
+  datos-sqlserver:

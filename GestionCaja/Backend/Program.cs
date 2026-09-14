@@ -58,7 +58,7 @@ builder.Services.AddCors(opciones =>
     opciones.AddPolicy(PoliticaCors, politica =>
     {
         politica
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins(builder.Configuration["FrontendUrl"] ?? "http://localhost:3000")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -79,15 +79,26 @@ builder.Services.AddScoped<IRepositorioDashboard, RepositorioDashboard>();
 builder.Services.AddScoped<IRepositorioUsuarios, RepositorioUsuarios>();
 var app = builder.Build();
 
-// ─── SIEMBRA ─────────────────────────────────────────────────
+// ─── MIGRACIONES Y SIEMBRA ───────────────────────────────────
 
 using (var alcance = app.Services.CreateScope())
 {
     var contexto = alcance.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    await contexto.Database.MigrateAsync();
+    // Aplica todas las migraciones pendientes, igual que Update-Database.
+    // Lee __EFMigrationsHistory para saber cuáles faltan, así que
+    // correrlo mil veces es inofensivo.
+    //
+    // NOTA HONESTA: esto está bien para desarrollo y para una demo.
+    // En producción de verdad no se hace, porque si levantas tres
+    // copias de la aplicación a la vez, las tres intentarían migrar
+    // al mismo tiempo. Allí las migraciones se aplican en un paso
+    // aparte del despliegue. Es el tipo de matiz que vale decir en
+    // una entrevista si te preguntan por esta línea.
+
     await SembradorDeDatos.SembrarAsync(contexto);
 }
-// Fíjate que aquí NO registro nada: solo PIDO algo que ya estaba
-// registrado. Pedir sí se puede después de la frontera; registrar no.
 
 // ╔═══════════════════════════════════════════════════════════╗
 // ║  MITAD 2: LA TUBERÍA                                      ║

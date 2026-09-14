@@ -1,0 +1,77 @@
+services:
+
+  # ═══════════════════════════════════════════════════════
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: gestioncaja-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Password123!"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - datos-sqlserver:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Password123!' -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════
+  backend:
+    build:
+      context: ./GestionCaja
+      # ↑ CORREGIDO. El contexto es la carpeta de la SOLUCIÓN,
+      #   porque el Dockerfile copia los cuatro proyectos.
+      dockerfile: Backend/Dockerfile
+      # ↑ La ruta del Dockerfile, relativa al contexto de arriba.
+      #   Resuelve a: GestionCaja/Backend/Dockerfile
+    container_name: gestioncaja-backend
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+
+      ConnectionStrings__BaseDeDatos: "Server=sqlserver,1433;Database=GestionCaja;User Id=sa;Password=Password123!;TrustServerCertificate=True"
+      # "sqlserver" es el NOMBRE DEL SERVICIO de arriba, no una IP.
+      # Docker Compose resuelve el DNS dentro de su red interna.
+      # Compáralo con tu appsettings.Development.json, que apunta a
+      # (localdb)\MSSQLLocalDB. Mismo código, distinta cadena de texto.
+
+      Jwt__Clave: "clave-de-docker-larga-de-mas-de-32-caracteres-cambiar-en-produccion"
+      Jwt__Emisor: "GestionCajaApi"
+      Jwt__Audiencia: "GestionCajaFrontend"
+      Jwt__MinutosDeVida: "60"
+      # El doble guion bajo equivale a dos puntos:
+      # Jwt__Clave  ->  "Jwt": { "Clave": ... }
+
+      FrontendUrl: "http://localhost:3000"
+      # CORS: la dirección desde donde pide el NAVEGADOR, que está
+      # fuera de la red de Docker y no conoce el nombre "frontend".
+    ports:
+      - "5000:8080"
+      # izquierda = mi PC  ·  derecha = dentro del contenedor
+
+  # ═══════════════════════════════════════════════════════
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://localhost:5000"
+        # localhost, NO http://backend:8080, aunque los dos estén
+        # en la misma red. Porque quien hace esta llamada es el
+        # navegador, y el navegador corre en tu PC.
+        #
+        # Esto es literalmente la pregunta 2 de tu sustentación.
+    container_name: gestioncaja-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  datos-sqlserver:
