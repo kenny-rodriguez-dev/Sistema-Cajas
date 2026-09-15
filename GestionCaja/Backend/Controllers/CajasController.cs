@@ -151,4 +151,30 @@ public class CajasController : ControllerBase
 
         return Ok(new { mensaje = "Sesión cerrada" });
     }
+
+    [HttpGet("mis-cajas")]
+    [Authorize(Roles = "Cajero")]
+    // El GET /api/cajas de arriba es solo para Gestor y Admin.
+    // El cajero necesita ver SUS cajas, no todas: por eso un endpoint aparte
+    // en vez de aflojarle los permisos al otro.
+    public async Task<IActionResult> MisCajas()
+    {
+        int miId = UsuarioActualId;
+        var cajas = await _repositorio.ListarDeCajeroAsync(miId);
+        var miSesion = await _repositorio.ObtenerSesionAbiertaDeUsuarioAsync(miId);
+
+        return Ok(new
+        {
+            miSesionCajaId = miSesion?.CajaId,
+            // null = no tengo ninguna caja abierta
+            cajas = cajas.Select(c => new
+            {
+                c.Id,
+                c.Nombre,
+                OcupadaPor = c.Sesiones.FirstOrDefault()?.Usuario.Username,
+                EsMia = miSesion != null && miSesion.CajaId == c.Id
+            })
+        });
+    }
+
 }

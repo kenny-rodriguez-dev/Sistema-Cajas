@@ -129,4 +129,11 @@ public class TurnosController : ControllerBase
 
         return Ok(new { mensaje = $"Turno {turno.Codigo} atendido" });
     }
+
+    [HttpGet("tipos")]
+    public async Task<IActionResult> ListarTipos()
+    {
+        var tipos = await _repositorio.ListarTiposAsync();
+        return Ok(tipos.Select(t => new { t.Id, t.Codigo, t.Descripcion }));
+    }
 }

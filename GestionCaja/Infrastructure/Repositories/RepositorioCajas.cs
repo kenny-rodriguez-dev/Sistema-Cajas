@@ -23,6 +23,16 @@ public class RepositorioCajas : IRepositorioCajas
     // Include trae las asignaciones; ThenInclude trae el usuario de cada una.
     // Sin esto, Asignaciones[0].Usuario vendría en null.
 
+    public async Task<List<Caja>> ListarDeCajeroAsync(int usuarioId) =>
+    await _contexto.Cajas
+        .Where(c => c.Activo && c.Asignaciones.Any(a => a.UsuarioId == usuarioId))
+        // Any() dentro del Where: "cajas donde EXISTA una asignación de este usuario".
+        // EF lo traduce a un EXISTS en SQL, sin traer las asignaciones.
+        .Include(c => c.Sesiones.Where(s => s.FechaCierre == null))
+            .ThenInclude(s => s.Usuario)
+        .OrderBy(c => c.Nombre)
+        .ToListAsync();
+
     public async Task<Caja?> ObtenerAsync(int cajaId) =>
         await _contexto.Cajas.FirstOrDefaultAsync(c => c.Id == cajaId && c.Activo);
 

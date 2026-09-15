@@ -52,6 +52,9 @@ public class RepositorioTurnos : IRepositorioTurnos
         await _contexto.TiposAtencion
             .FirstOrDefaultAsync(t => t.Id == tipoAtencionId && t.Activo);
 
+    public async Task<List<TipoAtencion>> ListarTiposAsync() =>
+    await _contexto.TiposAtencion.Where(t => t.Activo).OrderBy(t => t.Codigo).ToListAsync();
+
     public async Task CrearAsync(Turno turno)
     {
         _contexto.Turnos.Add(turno);

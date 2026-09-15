@@ -11,4 +11,5 @@ public interface IRepositorioTurnos
     Task<Turno?> ObtenerPendienteAsync(int turnoId);
     Task GuardarAsync();
     Task<int> ContarAtendidosDelDiaAsync(DateOnly fecha, int? usuarioId);
+    Task<List<TipoAtencion>> ListarTiposAsync();
 }
