@@ -452,6 +452,11 @@ namespace Infrastructure.Migrations
                         {
                             OpcionMenuId = 7,
                             RolId = 3
+                        },
+                        new
+                        {
+                            OpcionMenuId = 3,
+                            RolId = 2
                         });
                 });
 

@@ -91,7 +91,8 @@ public class AppDbContext : DbContext
                 new { OpcionMenuId = 1, RolId = 3 }, new { OpcionMenuId = 2, RolId = 1 },
                 new { OpcionMenuId = 3, RolId = 1 }, new { OpcionMenuId = 4, RolId = 2 },
                 new { OpcionMenuId = 5, RolId = 3 }, new { OpcionMenuId = 6, RolId = 3 },
-                new { OpcionMenuId = 7, RolId = 3 }
+                new { OpcionMenuId = 7, RolId = 3 },
+                new { OpcionMenuId = 3, RolId = 2 }
             );
         });
 
