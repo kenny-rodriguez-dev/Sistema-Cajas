@@ -26,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<Equipo> Equipos => Set<Equipo>();
     public DbSet<FormaPago> FormasPago => Set<FormaPago>();
     public DbSet<Contrato> Contratos => Set<Contrato>();
+    public DbSet<TokenRecuperacion> TokensRecuperacion => Set<TokenRecuperacion>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -274,6 +275,24 @@ public class AppDbContext : DbContext
                    .HasForeignKey(c => c.ContratoAnteriorId).OnDelete(DeleteBehavior.Restrict);
             // La relación consigo misma. EF la maneja igual que
             // cualquier otra, solo que ambos extremos son la misma tabla.
+        });
+
+        // ─── TOKEN DE RECUPERACIÓN ───
+        modelo.Entity<TokenRecuperacion>(entidad =>
+        {
+            entidad.Property(t => t.TokenHash).HasMaxLength(100).IsRequired();
+
+            entidad.HasIndex(t => t.TokenHash);
+            // Índice normal, NO único: voy a buscar por este campo
+            // en cada intento de restablecer, y sin índice sería un
+            // recorrido completo de la tabla.
+
+            entidad.HasOne(t => t.Usuario).WithMany()
+                   .HasForeignKey(t => t.UsuarioId)
+                   .OnDelete(DeleteBehavior.Cascade);
+            // Cascade aquí SÍ tiene sentido, al revés que en el resto
+            // del proyecto: si se borrara un usuario, sus tokens de
+            // recuperación no le sirven a nadie. No son historial.
         });
     }
     protected override void ConfigureConventions(ModelConfigurationBuilder configuracion)

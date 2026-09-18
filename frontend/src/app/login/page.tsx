@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { guardarSesion } from '@/lib/sesion';
+import Link from 'next/link';
 // El "@/" es un atajo que apunta a la carpeta src.
 // Evita rutas horribles como '../../../lib/sesion'.
 
@@ -115,6 +116,9 @@ export default function LoginPage() {
                     >
                         {enviando ? 'Entrando...' : 'Entrar'}
                     </button>
+                    <Link href="/recuperar" className="block mt-4 text-center text-sm text-blue-600 underline">
+                        ¿Olvidaste tu contraseña?
+                    </Link>
                 </form>
 
                 <p className="mt-4 text-xs text-gray-500 text-center">

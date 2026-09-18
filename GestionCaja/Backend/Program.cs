@@ -78,6 +78,8 @@ builder.Services.AddScoped<ILectorClientesArchivo, LectorClientesExcel>();
 builder.Services.AddScoped<IRepositorioDashboard, RepositorioDashboard>();
 builder.Services.AddScoped<IRepositorioUsuarios, RepositorioUsuarios>();
 builder.Services.AddScoped<ILectorUsuariosArchivo, LectorUsuariosExcel>();
+builder.Services.AddScoped<IRepositorioRecuperacion, RepositorioRecuperacion>();
+builder.Services.AddScoped<IServicioRecuperacion, ServicioRecuperacion>();
 var app = builder.Build();
 
 // ─── MIGRACIONES Y SIEMBRA ───────────────────────────────────
