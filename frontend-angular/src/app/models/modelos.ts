@@ -56,3 +56,50 @@ export interface ResultadoCarga {
     errores: ErrorFila[];
     mensaje: string;
 }
+
+// ─── USUARIOS ───
+export interface UsuarioLista {
+    id: number;
+    username: string;
+    correo: string;
+    rol: string;
+    rolId: number;
+    activo: boolean;
+    aprobado: boolean;
+    fechaCreacion: string;
+    creadoPor: string | null;
+}
+
+export interface CrearUsuarioDto {
+    username: string;
+    password: string;
+    correo: string;
+    rolId: number;
+}
+
+// ─── DASHBOARD ───
+export interface IndicadoresUsuarios {
+    total: number;
+    activos: number;
+    inactivos: number;
+    pendientesAprobacion: number;
+    conSesionAbierta: number;
+    gestores: number;
+    cajeros: number;
+}
+
+export interface IndicadorCaja {
+    caja: string;
+    cajerosAsignados: number;
+    turnosAtendidos: number;
+    ocupadaPor: string | null;
+}
+
+export interface DashboardDto {
+    usuarios: IndicadoresUsuarios;
+    cajas: IndicadorCaja[];
+    turnosEmitidos: number;
+    turnosAtendidos: number;
+    turnosPendientes: number;
+    contratosActivos: number;
+}

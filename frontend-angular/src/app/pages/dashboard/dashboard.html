@@ -1,0 +1,116 @@
+<main class="p-8">
+    <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
+
+    <!-- ─── FILTRO ─── -->
+    <form [formGroup]="filtro" (ngSubmit)="cargar()"
+        class="bg-white border rounded-lg p-4 mb-6 flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">Desde</label>
+            <input type="date" formControlName="desde" class="border rounded px-3 py-2 text-sm" />
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">Hasta</label>
+            <input type="date" formControlName="hasta" class="border rounded px-3 py-2 text-sm" />
+        </div>
+        <button type="submit" [disabled]="cargando()"
+            class="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium disabled:bg-gray-400">
+            {{ cargando() ? 'Cargando...' : 'Actualizar' }}
+        </button>
+
+        @if (filtro.errors?.['rangoInvalido']) {
+        <p class="w-full text-sm text-red-600">La fecha inicial no puede ser mayor que la final</p>
+        }
+        <!-- filtro.errors (del GRUPO, no de un campo) trae el error del
+         validador de grupo. Aparece en vivo mientras cambias las fechas,
+         antes de presionar nada. -->
+    </form>
+
+    @if (error()) {
+    <div class="mb-6 p-3 rounded bg-red-100 text-red-800">{{ error() }}</div>
+    }
+
+    @if (datos(); as d) {
+    <!-- ─── USUARIOS ─── -->
+    <h2 class="text-lg font-semibold mb-3">Usuarios</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Total</p>
+            <p class="text-2xl font-bold mt-1">{{ d.usuarios.total }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Activos</p>
+            <p class="text-2xl font-bold mt-1 text-green-600">{{ d.usuarios.activos }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Inactivos</p>
+            <p class="text-2xl font-bold mt-1 text-gray-400">{{ d.usuarios.inactivos }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Sin aprobar</p>
+            <p class="text-2xl font-bold mt-1 text-amber-600">{{ d.usuarios.pendientesAprobacion }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Gestores</p>
+            <p class="text-2xl font-bold mt-1">{{ d.usuarios.gestores }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Cajeros</p>
+            <p class="text-2xl font-bold mt-1">{{ d.usuarios.cajeros }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Sesión abierta</p>
+            <p class="text-2xl font-bold mt-1 text-blue-600">{{ d.usuarios.conSesionAbierta }}</p>
+        </div>
+    </div>
+
+    <!-- ─── PERIODO ─── -->
+    <h2 class="text-lg font-semibold mb-3">Actividad del periodo</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Turnos emitidos</p>
+            <p class="text-2xl font-bold mt-1">{{ d.turnosEmitidos }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Atendidos</p>
+            <p class="text-2xl font-bold mt-1 text-green-600">{{ d.turnosAtendidos }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Pendientes</p>
+            <p class="text-2xl font-bold mt-1 text-amber-600">{{ d.turnosPendientes }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Contratos activos</p>
+            <p class="text-2xl font-bold mt-1">{{ d.contratosActivos }}</p>
+        </div>
+    </div>
+
+    <!-- ─── CAJAS ─── -->
+    <h2 class="text-lg font-semibold mb-3">Cajas</h2>
+    <table class="w-full bg-white border rounded-lg overflow-hidden text-sm">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="text-left px-4 py-2">Caja</th>
+                <th class="text-left px-4 py-2">Cajeros asignados</th>
+                <th class="text-left px-4 py-2">Turnos atendidos</th>
+                <th class="text-left px-4 py-2">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (c of d.cajas; track c.caja) {
+            <tr class="border-t">
+                <td class="px-4 py-2 font-medium">{{ c.caja }}</td>
+                <td class="px-4 py-2">{{ c.cajerosAsignados }} / 2</td>
+                <td class="px-4 py-2">{{ c.turnosAtendidos }}</td>
+                <td class="px-4 py-2">
+                    @if (c.ocupadaPor) {
+                    <span class="text-blue-700">Operando: {{ c.ocupadaPor }}</span>
+                    } @else {
+                    <span class="text-gray-400">Libre</span>
+                    }
+                </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+    }
+</main>
