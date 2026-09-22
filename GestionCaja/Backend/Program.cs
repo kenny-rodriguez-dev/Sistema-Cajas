@@ -58,7 +58,10 @@ builder.Services.AddCors(opciones =>
     opciones.AddPolicy(PoliticaCors, politica =>
     {
         politica
-            .WithOrigins(builder.Configuration["FrontendUrl"] ?? "http://localhost:3000")
+            .WithOrigins(builder.Configuration["FrontendUrl"] ?? "http://localhost:3000",  
+                "http://localhost:4200")
+            // WithOrigins acepta varios. El navegador manda su cabecera
+            // Origin y el middleware revisa si está en esta lista.
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

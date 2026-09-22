@@ -1,0 +1,82 @@
+<main class="max-w-3xl p-8">
+    <h1 class="text-2xl font-bold mb-2">Carga masiva de clientes</h1>
+    <p class="text-gray-600 mb-6 text-sm">
+        Sube un archivo .xlsx o .csv. La primera fila debe ser de encabezados,
+        en este orden: Nombres, Apellidos, Identificación, Correo, Teléfono,
+        Dirección, Referencia.
+    </p>
+
+    <div class="bg-amber-50 border border-amber-200 rounded p-4 mb-6 text-sm text-amber-900">
+        <strong>Importante:</strong> formatea como Texto las columnas de
+        identificación y teléfono antes de escribirlas, o Excel borrará el
+        cero del inicio.
+    </div>
+
+    <div class="bg-white border rounded-lg p-6 mb-6">
+        <input type="file" accept=".xlsx,.csv" (change)="seleccionar($event)" class="block w-full text-sm mb-4
+             file:mr-4 file:py-2 file:px-4 file:rounded file:border-0
+             file:bg-blue-50 file:text-blue-700 file:font-medium" />
+        <!-- (change) se dispara al elegir archivo. $event es el evento
+         del navegador, que paso tal cual al método.
+         Recuerda: accept solo filtra el explorador de archivos.
+         La validación real es la del backend. -->
+
+        @if (archivo(); as a) {
+        <p class="text-sm text-gray-600 mb-4">
+            Seleccionado: <strong>{{ a.name }}</strong>
+            ({{ (a.size / 1024).toFixed(1) }} KB)
+        </p>
+        }
+
+        <button (click)="subir()" [disabled]="subiendo() || !archivo()" class="bg-blue-600 text-white rounded px-5 py-2 font-medium
+             disabled:bg-gray-400 disabled:cursor-not-allowed">
+            {{ subiendo() ? 'Importando...' : 'Importar clientes' }}
+        </button>
+    </div>
+
+    @if (mensajeError()) {
+    <div class="mb-4 p-3 rounded bg-red-100 text-red-800">{{ mensajeError() }}</div>
+    }
+
+    @if (resultado(); as r) {
+    @if (r.exitoso) {
+    <div class="p-4 rounded bg-green-100 text-green-800">
+        <p class="font-medium">{{ r.mensaje }}</p>
+        <p class="text-sm mt-1">
+            Filas leídas: {{ r.filasLeidas }} · Importadas: {{ r.filasImportadas }}
+        </p>
+    </div>
+    } @else {
+    <div class="p-4 rounded bg-red-100 text-red-800 mb-4">
+        <p class="font-medium">{{ r.mensaje }}</p>
+        <p class="text-sm mt-1">Corrige el archivo y vuelve a subirlo completo.</p>
+    </div>
+
+    <table class="w-full bg-white border rounded-lg overflow-hidden text-sm">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="text-left px-4 py-2 w-20">Fila</th>
+                <th class="text-left px-4 py-2">Problemas encontrados</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (e of r.errores; track e.fila) {
+            <tr class="border-t">
+                <td class="px-4 py-2 font-mono font-medium align-top">{{ e.fila }}</td>
+                <td class="px-4 py-2">
+                    <ul class="list-disc list-inside">
+                        @for (mensaje of e.errores; track mensaje) {
+                        <li>{{ mensaje }}</li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+    <!-- @for anidado dentro de otro @for. Cada uno con su track.
+           Y ese número de fila es el de Excel, porque en el backend
+           guardaste RowNumber() y no un índice. -->
+    }
+    }
+</main>

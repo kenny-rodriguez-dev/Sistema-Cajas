@@ -1,0 +1,98 @@
+<main class="max-w-xl p-8">
+    <h1 class="text-2xl font-bold mb-6">Nuevo cliente</h1>
+
+    @if (exito()) {
+    <div class="mb-4 p-3 rounded bg-green-100 text-green-800">{{ exito() }}</div>
+    }
+    @if (mensajeError()) {
+    <div class="mb-4 p-3 rounded bg-red-100 text-red-800">{{ mensajeError() }}</div>
+    }
+
+    <form [formGroup]="formulario" (ngSubmit)="guardar()">
+
+        <!-- ─── NOMBRES ─── -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Nombres</label>
+            <input formControlName="nombres" class="w-full border rounded px-3 py-2 bg-white"
+                [class.border-red-500]="mensajeDe('nombres')" [class.border-gray-300]="!mensajeDe('nombres')" />
+            @if (mensajeDe('nombres'); as m) {
+            <p class="text-red-600 text-sm mt-1">{{ m }}</p>
+            }
+            <!-- [class.border-red-500] = "aplica esta clase SI la expresión
+           es verdadera". El borde se pone rojo solo cuando hay error.
+           Es la forma de Angular de hacer clases condicionales. -->
+        </div>
+
+        <!-- ─── APELLIDOS ─── -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Apellidos</label>
+            <input formControlName="apellidos" class="w-full border rounded px-3 py-2 bg-white"
+                [class.border-red-500]="mensajeDe('apellidos')" [class.border-gray-300]="!mensajeDe('apellidos')" />
+            @if (mensajeDe('apellidos'); as m) {
+            <p class="text-red-600 text-sm mt-1">{{ m }}</p>
+            }
+        </div>
+
+        <!-- ─── IDENTIFICACIÓN ─── -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Identificación</label>
+            <input formControlName="identificacion" inputmode="numeric" class="w-full border rounded px-3 py-2 bg-white"
+                [class.border-red-500]="mensajeDe('identificacion')"
+                [class.border-gray-300]="!mensajeDe('identificacion')" />
+            @if (mensajeDe('identificacion'); as m) {
+            <p class="text-red-600 text-sm mt-1">{{ m }}</p>
+            }
+            <!-- inputmode="numeric" muestra el teclado numérico en el celular.
+           Y NO uso type="number": ese tipo se come el cero inicial,
+           el mismo problema que tuviste con Excel. -->
+        </div>
+
+        <!-- ─── CORREO ─── -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Correo</label>
+            <input formControlName="correo" type="email" class="w-full border rounded px-3 py-2 bg-white"
+                [class.border-red-500]="mensajeDe('correo')" [class.border-gray-300]="!mensajeDe('correo')" />
+            @if (mensajeDe('correo'); as m) {
+            <p class="text-red-600 text-sm mt-1">{{ m }}</p>
+            }
+        </div>
+
+        <!-- ─── TELÉFONO ─── -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Teléfono</label>
+            <input formControlName="telefono" inputmode="tel" class="w-full border rounded px-3 py-2 bg-white"
+                [class.border-red-500]="mensajeDe('telefono')" [class.border-gray-300]="!mensajeDe('telefono')" />
+            @if (mensajeDe('telefono'); as m) {
+            <p class="text-red-600 text-sm mt-1">{{ m }}</p>
+            }
+        </div>
+
+        <!-- ─── DIRECCIÓN ─── -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Dirección</label>
+            <input formControlName="direccion" class="w-full border rounded px-3 py-2 bg-white"
+                [class.border-red-500]="mensajeDe('direccion')" [class.border-gray-300]="!mensajeDe('direccion')" />
+            @if (mensajeDe('direccion'); as m) {
+            <p class="text-red-600 text-sm mt-1">{{ m }}</p>
+            }
+        </div>
+
+        <!-- ─── REFERENCIA ─── -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium mb-1">Referencia de la dirección</label>
+            <input formControlName="referenciaDireccion" class="w-full border rounded px-3 py-2 bg-white"
+                [class.border-red-500]="mensajeDe('referenciaDireccion')"
+                [class.border-gray-300]="!mensajeDe('referenciaDireccion')" />
+            @if (mensajeDe('referenciaDireccion'); as m) {
+            <p class="text-red-600 text-sm mt-1">{{ m }}</p>
+            }
+        </div>
+
+        <button type="submit" [disabled]="enviando()" class="w-full bg-blue-600 text-white rounded py-2 font-medium
+             disabled:bg-gray-400 disabled:cursor-not-allowed">
+            {{ enviando() ? 'Guardando...' : 'Guardar cliente' }}
+        </button>
+        <!-- Deshabilitado mientras envía: evita que un doble clic
+         cree el cliente dos veces. -->
+    </form>
+</main>

@@ -1,0 +1,59 @@
+@if (cargando()) {
+<div class="min-h-screen flex items-center justify-center text-gray-500">
+    Cargando...
+</div>
+} @else {
+<div class="min-h-screen flex">
+
+    <!-- ─── SIDEBAR ─── -->
+    <aside class="w-64 bg-slate-800 text-slate-100 flex flex-col">
+        <div class="p-5 border-b border-slate-700">
+            <h2 class="font-bold text-lg">Gestión de Caja</h2>
+            <p class="text-sm text-slate-400 mt-1">{{ sesion.sesion()?.username }}</p>
+            <span class="inline-block mt-2 text-xs bg-slate-700 px-2 py-1 rounded">
+                {{ sesion.sesion()?.rol }}
+            </span>
+        </div>
+
+        <nav class="flex-1 p-3">
+            @for (opcion of menu(); track opcion.ruta) {
+            <a
+            [routerLink]="opcion.ruta"
+            routerLinkActive="bg-blue-600 text-white"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="block px-3 py-2 rounded mb-1 text-sm text-slate-300 hover:bg-slate-700">
+            {{ opcion.etiqueta }}
+            </a>
+            } @empty {
+            <p class="text-slate-500 text-sm px-3">Sin opciones</p>
+            }
+            <!-- @for necesita SIEMPRE un "track": le dice a Angular cómo
+             identificar cada elemento para no repintar toda la lista
+             cuando cambia uno. Es el "key" de React, pero aquí es
+             obligatorio y el compilador te obliga a ponerlo.
+
+             routerLinkActive aplica esas clases SOLO cuando la ruta
+             activa coincide. En React lo hiciste a mano comparando
+             con usePathname; aquí es una directiva.
+
+             @empty se dibuja si la lista está vacía. No tiene
+             equivalente directo en React: allí escribías un if aparte. -->
+        </nav>
+
+        <div class="p-3 border-t border-slate-700">
+            <button (click)="salir()"
+                class="w-full text-left px-3 py-2 rounded text-sm text-slate-300 hover:bg-slate-700">
+                Cerrar sesión
+            </button>
+        </div>
+    </aside>
+
+    <!-- ─── CONTENIDO ─── -->
+    <div class="flex-1 bg-gray-50">
+        <router-outlet />
+        <!-- Un SEGUNDO router-outlet, anidado dentro del primero.
+           Aquí se pinta la pantalla hija que corresponda a la URL.
+           Así funciona un layout en Angular: rutas dentro de rutas. -->
+    </div>
+</div>
+}

@@ -1,0 +1,53 @@
+<main class="min-h-screen flex items-center justify-center bg-gray-50">
+    <div class="w-full max-w-sm bg-white p-8 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-6 text-center">Iniciar sesión</h1>
+
+        @if (error()) {
+        <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm">
+            {{ error() }}
+        </div>
+        }
+        <!-- @if es la sintaxis moderna (Angular 17+). Los tutoriales
+         viejos usan *ngIf; hace lo mismo pero esta es la actual.
+         Fíjate en error() con paréntesis: es un signal, se LEE
+         llamándolo. Sin paréntesis mostrarías el objeto, no el valor. -->
+
+        <form [formGroup]="formulario" (ngSubmit)="entrar()">
+            <!-- [formGroup] conecta este HTML con el objeto de la clase.
+           (ngSubmit) es el evento. Y no hace falta preventDefault():
+           Angular lo hace solo. -->
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">Usuario</label>
+                <input formControlName="username" autocomplete="username"
+                    class="w-full border border-gray-300 rounded px-3 py-2" />
+                <!-- formControlName lo enlaza con el campo del grupo.
+             Esto reemplaza value + onChange de React: el enlace
+             es bidireccional y automático. -->
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium mb-1">Contraseña</label>
+                <input type="password" formControlName="password" autocomplete="current-password"
+                    class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+
+            <button type="submit" [disabled]="enviando()" class="w-full bg-blue-600 text-white rounded py-2 font-medium
+               disabled:bg-gray-400 disabled:cursor-not-allowed">
+                {{ enviando() ? 'Entrando...' : 'Entrar' }}
+            </button>
+            <!-- Los corchetes [disabled] significan "el valor viene de
+           TypeScript". Sin corchetes sería el texto literal. -->
+        </form>
+
+        <a routerLink="/recuperar" class="block mt-4 text-center text-sm text-blue-600 underline">
+            ¿Olvidaste tu contraseña?
+        </a>
+        <!-- routerLink navega SIN recargar la página. Un <a href> normal
+         recargaría toda la aplicación. Es el <Link> de Next.js. -->
+
+        <p class="mt-4 text-xs text-gray-500 text-center">
+            admin0001 / Admin1234
+        </p>
+    </div>
+</main>
