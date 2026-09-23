@@ -53,15 +53,25 @@ builder.Services.AddAuthorization();
 
 const string PoliticaCors = "PermitirFrontend";
 
+var origenesPermitidos = builder.Configuration
+    .GetSection("Cors:OrigenesPermitidos")
+    .Get<string[]>() ?? [];
+// Lee la LISTA del appsettings.json y la convierte en un arreglo.
+// GetSection apunta a la sección; Get<string[]>() la transforma.
+//
+// Si la sección no existe, "?? []" deja una lista vacía, y CORS no
+// acepta a nadie. Es a propósito: si algo falla en la configuración,
+// es mejor bloquear todo por error que dejar entrar a cualquiera.
+// Eso se llama "fallar cerrado", y es un principio de seguridad.
+
 builder.Services.AddCors(opciones =>
 {
     opciones.AddPolicy(PoliticaCors, politica =>
     {
         politica
-            .WithOrigins(builder.Configuration["FrontendUrl"] ?? "http://localhost:3000",  
-                "http://localhost:4200")
-            // WithOrigins acepta varios. El navegador manda su cabecera
-            // Origin y el middleware revisa si está en esta lista.
+            .WithOrigins(origenesPermitidos)
+            // Ya no depende de FrontendUrl. Cambiar a dónde apunta
+            // el enlace de recuperación nunca más afecta a CORS.
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

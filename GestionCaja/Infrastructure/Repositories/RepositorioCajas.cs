@@ -96,4 +96,34 @@ public class RepositorioCajas : IRepositorioCajas
         // siguiendo ese objeto desde que lo leyó de la base, y detecta
         // solo que la propiedad cambió. Eso se llama change tracking.
     }
+
+    public async Task QuitarAsignacionAsync(int cajaId, int usuarioId)
+    {
+        var asignacion = await _contexto.AsignacionesCaja
+            .FirstOrDefaultAsync(a => a.CajaId == cajaId && a.UsuarioId == usuarioId);
+
+        if (asignacion is not null)
+        {
+            _contexto.AsignacionesCaja.Remove(asignacion);
+            await _contexto.SaveChangesAsync();
+        }
+        // ═══ ESTO ES UN BORRADO FÍSICO, Y ES A PROPÓSITO ═══
+        //
+        // El enunciado pide eliminaciones lógicas, y en todo el proyecto
+        // las respetaste. Aquí hay una excepción, y conviene que sepas
+        // defenderla porque es pregunta segura en una entrevista.
+        //
+        // Una asignación no es un registro de negocio: es un PERMISO.
+        // Dice "este cajero puede abrir esta caja". Quitarlo no destruye
+        // historia, porque la historia real de quién operó qué caja y
+        // cuándo vive en la tabla SesionesCaja, y esa no se toca.
+        //
+        // Además la llave primaria es (CajaId, UsuarioId). Con borrado
+        // lógico, volver a asignar al mismo cajero chocaría contra una
+        // fila "borrada" con la misma llave, y habría que reactivarla
+        // en vez de insertar. Complejidad sin ningún beneficio.
+        //
+        // La regla general no es "nunca borrar". Es "nunca perder
+        // historia". Aquí no se pierde.
+    }
 }

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { CajaLista, MisCajasRespuesta, TipoAtencion, Turno } from '../models/modelos';
+import { CajaDetalle, MisCajasRespuesta, TipoAtencion, Turno } from '../models/modelos';
 
 type Mensaje = { mensaje: string };
 
@@ -31,8 +31,19 @@ export class TurnosService {
 
     // ─── CAJAS ───
     listarCajas() {
-        return this.http.get<CajaLista[]>(`${this.api}/api/cajas`);
-        // Solo Gestor y Administrador.
+        return this.http.get<CajaDetalle[]>(`${this.api}/api/cajas`);
+        // Ahora tipado con la forma completa. La pantalla de turnos lo
+        // recibe en un signal de CajaLista[] y funciona igual: un
+        // CajaDetalle ES un CajaLista con campos de más.
+    }
+
+    asignarCajero(cajaId: number, usuarioId: number) {
+        return this.http.post<Mensaje>(`${this.api}/api/cajas/${cajaId}/asignaciones`, { usuarioId });
+    }
+
+    quitarCajero(cajaId: number, usuarioId: number) {
+        return this.http.delete<Mensaje>(`${this.api}/api/cajas/${cajaId}/asignaciones/${usuarioId}`);
+        // http.delete, el verbo exacto. Sin cuerpo.
     }
 
     misCajas() {

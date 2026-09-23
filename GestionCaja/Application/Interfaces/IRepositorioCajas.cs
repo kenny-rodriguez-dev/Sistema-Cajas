@@ -15,4 +15,5 @@ public interface IRepositorioCajas
     Task<bool> AbrirSesionAsync(SesionCaja sesion);   // false = la base la rechazó
     Task CerrarSesionAsync(SesionCaja sesion);
     Task<List<Caja>> ListarDeCajeroAsync(int usuarioId);
+    Task QuitarAsignacionAsync(int cajaId, int usuarioId);
 }

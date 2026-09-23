@@ -18,14 +18,10 @@ public class CajasController : ControllerBase
 
     private int UsuarioActualId =>
         int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-    // Propiedad de solo lectura que saca mi id del token.
-    // La escribo una vez y la uso en todos los métodos.
 
-    // ───────────────────────────────────────────────────────────
+    // ─── LISTAR (cambió la forma de los cajeros) ───────────────
     [HttpGet]
     [Authorize(Roles = "Gestor,Administrador")]
-    // La coma significa O: gestor O administrador.
-    // Si quisiera exigir AMBOS roles, serían dos atributos [Authorize] apilados.
     public async Task<IActionResult> Listar()
     {
         var cajas = await _repositorio.ListarConDetalleAsync();
@@ -34,18 +30,22 @@ public class CajasController : ControllerBase
         {
             Id = c.Id,
             Nombre = c.Nombre,
-            CajerosAsignados = c.Asignaciones.Select(a => a.Usuario.Username).ToList(),
+            CajerosAsignados = c.Asignaciones
+                .Select(a => new CajeroAsignadoDto
+                {
+                    Id = a.UsuarioId,
+                    Username = a.Usuario.Username
+                })
+                .ToList(),
+            // Ahora cada cajero va con su Id. Es lo que necesita
+            // la pantalla para el botón de quitar.
             OcupadaPor = c.Sesiones.FirstOrDefault()?.Usuario.Username
-            // El repositorio ya filtró solo las sesiones abiertas,
-            // así que si hay una, esa es la que ocupa la caja.
         }));
     }
 
-    // ───────────────────────────────────────────────────────────
+    // ─── ASIGNAR (sin cambios) ─────────────────────────────────
     [HttpPost("{cajaId}/asignaciones")]
     [Authorize(Roles = "Gestor")]
-    // "Los usuarios gestores se encargan de asignar a los usuarios
-    //  cajeros a las cajas."
     public async Task<IActionResult> AsignarCajero(int cajaId, AsignarCajeroDto dto)
     {
         var caja = await _repositorio.ObtenerAsync(cajaId);
@@ -62,27 +62,9 @@ public class CajasController : ControllerBase
         if (await _repositorio.EstaAsignadoAsync(cajaId, dto.UsuarioId))
             return Conflict(new { mensaje = "Ese cajero ya está asignado a esta caja" });
 
-        // ═══ LA REGLA DEL MÁXIMO 2 ═══
         int asignados = await _repositorio.ContarAsignadosAsync(cajaId);
         if (asignados >= 2)
-            return Conflict(new
-            {
-                mensaje = "Esta caja ya tiene el máximo de 2 cajeros asignados"
-            });
-        //
-        // Acuérdate de lo que te dije al leer el diagrama: el esquema NO
-        // PUEDE expresar "máximo 2". Un diagrama captura la estructura
-        // (uno a muchos), no los límites de negocio.
-        //
-        // Por eso esta regla vive aquí, en código. Y fíjate que aquí SÍ
-        // basta con un "if": a diferencia de la sesión, dos gestores
-        // asignando el mismo cajero al mismo segundo es un escenario que
-        // no ocurre en la práctica, y si ocurriera, tener 3 asignados un
-        // instante no rompe nada crítico. La sesión sí: dos personas
-        // cobrando en la misma caja es dinero descuadrado.
-        //
-        // Esa diferencia de criterio es lo que se te va a preguntar:
-        // no todas las reglas necesitan la misma dureza.
+            return Conflict(new { mensaje = "Esta caja ya tiene el máximo de 2 cajeros asignados" });
 
         await _repositorio.AsignarAsync(new AsignacionCaja
         {
@@ -93,7 +75,40 @@ public class CajasController : ControllerBase
         return Ok(new { mensaje = $"{usuario.Username} asignado a {caja.Nombre}" });
     }
 
-    // ───────────────────────────────────────────────────────────
+    // ─── QUITAR (NUEVO) ────────────────────────────────────────
+    [HttpDelete("{cajaId}/asignaciones/{usuarioId}")]
+    // DELETE, no POST. En REST el verbo dice qué haces:
+    // POST crea una asignación, DELETE la elimina, sobre la MISMA URL.
+    [Authorize(Roles = "Gestor")]
+    public async Task<IActionResult> QuitarCajero(int cajaId, int usuarioId)
+    {
+        if (!await _repositorio.EstaAsignadoAsync(cajaId, usuarioId))
+            return NotFound(new { mensaje = "Ese cajero no está asignado a esta caja" });
+
+        var sesion = await _repositorio.ObtenerSesionAbiertaDeUsuarioAsync(usuarioId);
+
+        if (sesion is not null && sesion.CajaId == cajaId)
+            return Conflict(new
+            {
+                mensaje = "No se puede quitar: el cajero tiene esta caja abierta en este momento"
+            });
+        // ═══ LA REGLA QUE NADIE PIDE Y QUE HACE FALTA ═══
+        //
+        // Sin esto, el gestor quita a un cajero que está cobrando AHORA.
+        // Queda una sesión abierta a nombre de alguien que ya no tiene
+        // permiso sobre esa caja: el cajero no podría ni cerrarla
+        // desde la pantalla, porque la caja ya no aparece en sus cajas.
+        //
+        // Primero se cierra la sesión, después se quita el permiso.
+        // Otra salvaguarda: el enunciado no la pide hasta que alguien
+        // la rompe.
+
+        await _repositorio.QuitarAsignacionAsync(cajaId, usuarioId);
+
+        return Ok(new { mensaje = "Cajero quitado de la caja" });
+    }
+
+    // ─── ABRIR (sin cambios) ───────────────────────────────────
     [HttpPost("{cajaId}/abrir")]
     [Authorize(Roles = "Cajero")]
     public async Task<IActionResult> AbrirSesion(int cajaId)
@@ -102,8 +117,6 @@ public class CajasController : ControllerBase
 
         if (!await _repositorio.EstaAsignadoAsync(cajaId, miId))
             return StatusCode(403, new { mensaje = "No estás asignado a esta caja" });
-        // Que seas Cajero no basta: tienes que ser cajero DE ESTA caja.
-        // El [Authorize] revisa el rol; esto revisa el permiso concreto.
 
         var miSesionAbierta = await _repositorio.ObtenerSesionAbiertaDeUsuarioAsync(miId);
         if (miSesionAbierta is not null)
@@ -112,12 +125,8 @@ public class CajasController : ControllerBase
                 mensaje = $"Ya tienes una sesión abierta en la caja {miSesionAbierta.CajaId}"
             });
 
-        // ═══ LA VERIFICACIÓN AMABLE ═══
         if (await _repositorio.HaySesionAbiertaEnCajaAsync(cajaId))
             return Conflict(new { mensaje = "Otro cajero está operando esta caja" });
-        //
-        // Este "if" NO garantiza nada. Existe solo para dar un mensaje
-        // claro en el 99.9% de los casos. La garantía real está abajo.
 
         bool abrio = await _repositorio.AbrirSesionAsync(new SesionCaja
         {
@@ -127,17 +136,11 @@ public class CajasController : ControllerBase
 
         if (!abrio)
             return Conflict(new { mensaje = "Otro cajero acaba de tomar esta caja" });
-        // ↑ AQUÍ ESTÁ LA GARANTÍA. Si la base rechazó el INSERT por el
-        //   índice único, es porque hubo una carrera y yo la perdí.
-        //
-        // Dos capas para la misma regla:
-        //   el "if"  -> buen mensaje, casi siempre
-        //   el índice -> correctitud, siempre
 
         return Ok(new { mensaje = "Sesión abierta" });
     }
 
-    // ───────────────────────────────────────────────────────────
+    // ─── CERRAR (sin cambios) ──────────────────────────────────
     [HttpPost("cerrar")]
     [Authorize(Roles = "Cajero")]
     public async Task<IActionResult> CerrarSesion()
@@ -152,11 +155,9 @@ public class CajasController : ControllerBase
         return Ok(new { mensaje = "Sesión cerrada" });
     }
 
+    // ─── MIS CAJAS (sin cambios) ───────────────────────────────
     [HttpGet("mis-cajas")]
     [Authorize(Roles = "Cajero")]
-    // El GET /api/cajas de arriba es solo para Gestor y Admin.
-    // El cajero necesita ver SUS cajas, no todas: por eso un endpoint aparte
-    // en vez de aflojarle los permisos al otro.
     public async Task<IActionResult> MisCajas()
     {
         int miId = UsuarioActualId;
@@ -166,7 +167,6 @@ public class CajasController : ControllerBase
         return Ok(new
         {
             miSesionCajaId = miSesion?.CajaId,
-            // null = no tengo ninguna caja abierta
             cajas = cajas.Select(c => new
             {
                 c.Id,
@@ -176,5 +176,4 @@ public class CajasController : ControllerBase
             })
         });
     }
-
 }

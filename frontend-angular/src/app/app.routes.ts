@@ -70,6 +70,11 @@ export const routes: Routes = [
                 loadComponent: () =>
                     import('./pages/en-construccion/en-construccion').then((m) => m.EnConstruccion),
             },
+            {
+                path: 'cajas',
+                canActivate: [rolGuard(['Gestor'])],
+                loadComponent: () => import('./pages/caja/caja').then((m) => m.Caja),
+            },
         ],
     },
 

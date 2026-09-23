@@ -117,6 +117,15 @@ proyecto-caja/
 ├── docker-compose.solo-backend.yml
 ├── docker-compose.solo-frontend.yml
 └── GestionCaja.postman_collection.json
+
+### Dos frontends, un backend
+
+| Frontend | Puerto | Tecnología | Imagen final |
+|---|---|---|---|
+| `frontend/` | 3000 | Next.js 15 / React | Node (servidor vivo) |
+| `frontend-angular/` | 4200 | Angular 22 | nginx (solo archivos estáticos) |
+
+Los dos consumen exactamente la misma API sin ninguna diferencia en el backend.
 ```
 
 **Regla de dependencias:** cada capa solo puede depender de las de adentro. `Domain` no conoce a nadie; `Application` conoce a `Domain`; `Infrastructure` a las dos; `Backend` a todas. Esto no es una convención: está impuesto por las referencias entre proyectos, así que el compilador lo hace cumplir.

@@ -390,6 +390,14 @@ namespace Infrastructure.Migrations
                             Etiqueta = "Carga masiva",
                             Orden = 7,
                             Ruta = "/clientes/carga"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Activo = true,
+                            Etiqueta = "Asignación de cajas",
+                            Orden = 8,
+                            Ruta = "/cajas"
                         });
                 });
 
@@ -456,6 +464,11 @@ namespace Infrastructure.Migrations
                         new
                         {
                             OpcionMenuId = 3,
+                            RolId = 2
+                        },
+                        new
+                        {
+                            OpcionMenuId = 8,
                             RolId = 2
                         });
                 });

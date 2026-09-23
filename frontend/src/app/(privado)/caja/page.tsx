@@ -3,45 +3,60 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 
-type MiCaja = {
+type CajeroAsignado = { id: number; username: string };
+
+type Caja = {
     id: number;
     nombre: string;
+    cajerosAsignados: CajeroAsignado[];
     ocupadaPor: string | null;
-    esMia: boolean;
 };
 
-type Turno = {
+type Usuario = {
     id: number;
-    codigo: string;
-    tipoAtencion: string;
-    caja: string;
-    estado: string;
+    username: string;
+    rol: string;
+    activo: boolean;
+    aprobado: boolean;
 };
 
-export default function CajaPage() {
-    const [cajas, setCajas] = useState<MiCaja[]>([]);
-    const [miSesionCajaId, setMiSesionCajaId] = useState<number | null>(null);
-    const [turnos, setTurnos] = useState<Turno[]>([]);
+export default function CajasPage() {
+    const [cajas, setCajas] = useState<Caja[]>([]);
+    const [cajeros, setCajeros] = useState<Usuario[]>([]);
+
+    const [seleccion, setSeleccion] = useState<Record<number, number | ''>>({});
+    // Hay UN desplegable por caja, así que guardo la elección de cada
+    // uno por separado, indexada por el id de la caja:
+    //   { 1: 4, 2: '' }  ->  en la caja 1 eligió al usuario 4,
+    //                        en la caja 2 no eligió nada
+
+    const [mensaje, setMensaje] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [exito, setExito] = useState<string | null>(null);
     const [cargando, setCargando] = useState(true);
     const [ocupado, setOcupado] = useState(false);
 
     const cargar = useCallback(async () => {
         try {
-            const [rCajas, rTurnos] = await Promise.all([
-                apiFetch('/api/cajas/mis-cajas'),
-                apiFetch('/api/turnos'),
+            const [rCajas, rUsuarios] = await Promise.all([
+                apiFetch('/api/cajas'),
+                apiFetch('/api/usuarios'),
             ]);
+            // Reutilizo el endpoint de usuarios que ya existe: el gestor
+            // tiene permiso para leerlo. No hizo falta crear uno nuevo.
 
-            if (rCajas.status === 403) { setError('Esta pantalla es solo para cajeros'); return; }
-
-            if (rCajas.ok) {
-                const datos = await rCajas.json();
-                setCajas(datos.cajas);
-                setMiSesionCajaId(datos.miSesionCajaId);
+            if (rCajas.status === 403) {
+                setError('Solo un gestor puede asignar cajas');
+                return;
             }
-            if (rTurnos.ok) setTurnos(await rTurnos.json());
+
+            if (rCajas.ok) setCajas(await rCajas.json());
+
+            if (rUsuarios.ok) {
+                const todos: Usuario[] = await rUsuarios.json();
+                setCajeros(todos.filter((u) => u.rol === 'Cajero' && u.activo && u.aprobado));
+                // Solo cajeros activos y aprobados. Asignar a uno inactivo o
+                // pendiente sería darle una caja a quien no puede entrar.
+            }
         } catch {
             setError('No se pudo conectar con el servidor');
         } finally {
@@ -51,19 +66,24 @@ export default function CajaPage() {
 
     useEffect(() => { cargar(); }, [cargar]);
 
-    async function accion(ruta: string, mensajeExito: string) {
+    async function ejecutar(ruta: string, metodo: string, cuerpo?: object) {
         setOcupado(true);
         setError(null);
-        setExito(null);
+        setMensaje(null);
+
         try {
-            const r = await apiFetch(ruta, { method: 'POST' });
+            const r = await apiFetch(ruta, {
+                method: metodo,
+                body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+            });
 
             if (r.status === 403) { setError('No tienes permiso para esta acción'); return; }
 
             const datos = await r.json();
-            if (!r.ok) { setError(datos.mensaje ?? 'No se pudo completar la acción'); return; }
+            if (!r.ok) { setError(datos.mensaje ?? 'No se pudo completar'); return; }
 
-            setExito(mensajeExito);
+            setMensaje(datos.mensaje);
+            setSeleccion({});
             await cargar();
         } catch {
             setError('No se pudo conectar con el servidor');
@@ -71,117 +91,114 @@ export default function CajaPage() {
             setOcupado(false);
         }
     }
-    // Una sola función para abrir, cerrar y atender: las tres son un POST
-    // sin cuerpo que después recarga. Escribir tres funciones casi idénticas
-    // sería repetir el mismo código tres veces.
+
+    function asignar(cajaId: number) {
+        const usuarioId = seleccion[cajaId];
+        if (!usuarioId) { setError('Elige un cajero primero'); return; }
+        ejecutar(`/api/cajas/${cajaId}/asignaciones`, 'POST', { usuarioId });
+    }
+
+    function quitar(cajaId: number, cajero: CajeroAsignado) {
+        if (!window.confirm(`¿Quitar a ${cajero.username} de esta caja?`)) return;
+        // Confirmación antes de una acción que quita permisos. Un clic
+        // por error dejaría a un cajero sin poder trabajar.
+        ejecutar(`/api/cajas/${cajaId}/asignaciones/${cajero.id}`, 'DELETE');
+    }
 
     if (cargando) return <main className="p-8 text-gray-500">Cargando...</main>;
 
-    const turnosDeMiCaja = turnos.filter(
-        (t) => t.estado === 'PEN' && cajas.find((c) => c.id === miSesionCajaId)?.nombre === t.caja
-    );
-    // Solo los pendientes de LA caja que tengo abierta.
-    // El backend igual lo verifica al atender: si mando el id de un turno
-    // de otra caja, responde 403. Capa 1 y capa 2, una vez más.
-
     return (
         <main className="p-8 max-w-4xl">
-            <h1 className="text-2xl font-bold mb-6">Procesos de caja</h1>
+            <h1 className="text-2xl font-bold mb-2">Asignación de cajas</h1>
+            <p className="text-sm text-gray-600 mb-6">
+                Cada caja admite un máximo de 2 cajeros, y solo uno puede operarla a la vez.
+            </p>
 
+            {mensaje && <div className="mb-4 p-3 rounded bg-green-100 text-green-800">{mensaje}</div>}
             {error && <div className="mb-4 p-3 rounded bg-red-100 text-red-800">{error}</div>}
-            {exito && <div className="mb-4 p-3 rounded bg-green-100 text-green-800">{exito}</div>}
 
-            <h2 className="text-lg font-semibold mb-3">Mis cajas asignadas</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {cajas.map((caja) => {
+                    const idsAsignados = new Set(caja.cajerosAsignados.map((c) => c.id));
+                    const disponibles = cajeros.filter((c) => !idsAsignados.has(c.id));
+                    const llena = caja.cajerosAsignados.length >= 2;
+                    // Un Set para buscar rápido si un id ya está asignado.
+                    // En el desplegable solo aparecen los que NO están en esta caja.
 
-            {cajas.length === 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded p-4 text-sm text-amber-900 mb-6">
-                    No tienes cajas asignadas. Un gestor debe asignarte una antes de que puedas operar.
-                </div>
-            )}
+                    return (
+                        <div key={caja.id} className="bg-white border rounded-lg p-5">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <p className="font-semibold text-lg">{caja.nombre}</p>
+                                    <p className="text-xs text-gray-500">
+                                        {caja.cajerosAsignados.length} / 2 cajeros
+                                    </p>
+                                </div>
+                                {caja.ocupadaPor ? (
+                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                        Operando: {caja.ocupadaPor}
+                                    </span>
+                                ) : (
+                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                        Libre
+                                    </span>
+                                )}
+                            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {cajas.map((c) => (
-                    <div key={c.id} className="bg-white border rounded-lg p-5">
-                        <div className="flex justify-between items-start mb-3">
-                            <p className="font-semibold text-lg">{c.nombre}</p>
-                            {c.esMia ? (
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                    La tienes abierta
-                                </span>
-                            ) : c.ocupadaPor ? (
-                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                    Ocupada por {c.ocupadaPor}
-                                </span>
-                            ) : (
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                    Libre
-                                </span>
-                            )}
-                        </div>
-
-                        {c.esMia ? (
-                            <button
-                                onClick={() => accion('/api/cajas/cerrar', 'Sesión cerrada')}
-                                disabled={ocupado}
-                                className="w-full bg-gray-700 text-white rounded py-2 text-sm font-medium disabled:bg-gray-400"
-                            >
-                                Cerrar sesión de caja
-                            </button>
-                        ) : (
-                            <button
-                                onClick={() => accion(`/api/cajas/${c.id}/abrir`, 'Sesión abierta')}
-                                disabled={ocupado || c.ocupadaPor !== null || miSesionCajaId !== null}
-                                className="w-full bg-blue-600 text-white rounded py-2 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
-                            >
-                                {c.ocupadaPor ? 'Ocupada' : miSesionCajaId !== null ? 'Ya tienes otra abierta' : 'Abrir caja'}
-                            </button>
-                        )}
-                        {/* El botón se apaga en TRES casos: si la caja está ocupada,
-                si ya tengo otra abierta, o si hay una acción en curso.
-                Es comodidad: el backend y el índice único de SQL Server
-                siguen siendo lo que de verdad impide el doble uso. */}
-                    </div>
-                ))}
-            </div>
-
-            {miSesionCajaId !== null && (
-                <>
-                    <div className="flex justify-between items-center mb-3">
-                        <h2 className="text-lg font-semibold">
-                            Turnos pendientes ({turnosDeMiCaja.length})
-                        </h2>
-                        <button onClick={cargar} className="text-sm text-blue-600 underline">
-                            Actualizar
-                        </button>
-                    </div>
-
-                    {turnosDeMiCaja.length === 0 ? (
-                        <div className="bg-white border rounded-lg p-6 text-center text-gray-400">
-                            No hay turnos pendientes en tu caja
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {turnosDeMiCaja.map((t) => (
-                                <div key={t.id} className="bg-white border rounded-lg p-4 flex justify-between items-center">
-                                    <div>
-                                        <p className="font-mono font-bold text-xl">{t.codigo}</p>
-                                        <p className="text-sm text-gray-500">{t.tipoAtencion}</p>
+                            <div className="space-y-2 mb-4">
+                                {caja.cajerosAsignados.length === 0 && (
+                                    <p className="text-sm text-gray-400">Sin cajeros asignados</p>
+                                )}
+                                {caja.cajerosAsignados.map((c) => (
+                                    <div key={c.id} className="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
+                                        <span className="text-sm">{c.username}</span>
+                                        <button
+                                            onClick={() => quitar(caja.id, c)}
+                                            disabled={ocupado}
+                                            className="text-xs text-red-600 hover:underline disabled:text-gray-400"
+                                        >
+                                            Quitar
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => accion(`/api/turnos/${t.id}/atender`, `Turno ${t.codigo} atendido`)}
-                                        disabled={ocupado}
-                                        className="bg-green-600 text-white rounded px-5 py-2 text-sm font-medium disabled:bg-gray-400"
+                                ))}
+                            </div>
+
+                            {llena ? (
+                                <p className="text-xs text-gray-500 text-center py-2">
+                                    Caja completa. Quita a un cajero para asignar otro.
+                                </p>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <select
+                                        value={seleccion[caja.id] ?? ''}
+                                        onChange={(e) =>
+                                            setSeleccion({
+                                                ...seleccion,
+                                                [caja.id]: e.target.value === '' ? '' : Number(e.target.value),
+                                            })
+                                        }
+                                        className="flex-1 border rounded px-3 py-2 text-sm"
                                     >
-                                        Atender
+                                        <option value="">Elige un cajero...</option>
+                                        {disponibles.map((c) => (
+                                            <option key={c.id} value={c.id}>{c.username}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={() => asignar(caja.id)}
+                                        disabled={ocupado}
+                                        className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium disabled:bg-gray-400"
+                                    >
+                                        Asignar
                                     </button>
                                 </div>
-                            ))}
+                            )}
+                            {/* El formulario desaparece con la caja llena. Es comodidad:
+                  el backend igual rechaza la tercera asignación con 409. */}
                         </div>
-                    )}
-                </>
-            )}
-            {/* La lista de turnos solo aparece si tengo una caja abierta.
-          Coincide con la regla del backend: atender sin sesión da 409. */}
+                    );
+                })}
+            </div>
         </main>
     );
 }

@@ -1,41 +1,28 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, forkJoin } from 'rxjs';
 import { TurnosService } from '../../services/turnos.service';
-import { MiCaja, Turno } from '../../models/modelos';
+import { UsuariosService } from '../../services/usuarios.service';
+import { CajaDetalle, CajeroAsignado, UsuarioLista } from '../../models/modelos';
 
 @Component({
-  selector: 'app-caja',
-  templateUrl: './caja.html',
+  selector: 'app-cajas',
+  templateUrl: './cajas.html',
 })
-export class Caja {
-  private servicio = inject(TurnosService);
+export class Cajas {
+  private turnosService = inject(TurnosService);
+  private usuariosService = inject(UsuariosService);
 
-  cajas = signal<MiCaja[]>([]);
-  miSesionCajaId = signal<number | null>(null);
-  turnos = signal<Turno[]>([]);
+  cajas = signal<CajaDetalle[]>([]);
+  cajeros = signal<UsuarioLista[]>([]);
+  seleccion = signal<Record<number, number>>({});
+  // Un desplegable por caja: guardo la elección de cada uno
+  // indexada por el id de la caja.
 
+  mensaje = signal<string | null>(null);
   error = signal<string | null>(null);
-  exito = signal<string | null>(null);
   cargando = signal(true);
   ocupado = signal(false);
-
-  // ═══ DOS computed ENCADENADOS ═══
-  miCaja = computed(() =>
-    this.cajas().find((c) => c.id === this.miSesionCajaId()) ?? null
-  );
-  // Depende de DOS signals. Angular detecta las dos dependencias solo.
-
-  turnosDeMiCaja = computed(() => {
-    const caja = this.miCaja();
-    if (!caja) return [];
-    return this.turnos().filter((t) => t.estado === 'PEN' && t.caja === caja.nombre);
-  });
-  // Este depende del anterior. Si cambia cualquiera de los tres signals
-  // de origen, la cascada se recalcula sola.
-  //
-  // Solo los pendientes de LA caja que tengo abierta. El backend igual
-  // lo verifica: si mando un turno de otra caja, responde 403.
 
   constructor() {
     this.cargar();
@@ -43,35 +30,50 @@ export class Caja {
 
   cargar(): void {
     forkJoin({
-      misCajas: this.servicio.misCajas(),
-      turnos: this.servicio.listarDelDia(),
+      cajas: this.turnosService.listarCajas(),
+      usuarios: this.usuariosService.listar(),
     }).subscribe({
       next: (r) => {
-        this.cajas.set(r.misCajas.cajas);
-        this.miSesionCajaId.set(r.misCajas.miSesionCajaId);
-        this.turnos.set(r.turnos);
+        this.cajas.set(r.cajas);
+        this.cajeros.set(
+          r.usuarios.filter((u) => u.rol === 'Cajero' && u.activo && u.aprobado)
+        );
+        // Solo cajeros activos y aprobados.
         this.cargando.set(false);
       },
       error: (e: HttpErrorResponse) => {
         this.cargando.set(false);
         this.error.set(
-          e.status === 403 ? 'Esta pantalla es solo para cajeros'
-            : 'No se pudieron cargar los datos'
+          e.status === 403 ? 'Solo un gestor puede asignar cajas' : 'No se pudieron cargar los datos'
         );
       },
     });
   }
 
-  private ejecutar(accion: Observable<{ mensaje: string }>, mensajeExito: string): void {
-    // Abrir, cerrar y atender son lo mismo: un POST sin datos que
-    // después recarga. Un método para los tres.
-    this.error.set(null);
-    this.exito.set(null);
+  disponiblesPara(caja: CajaDetalle): UsuarioLista[] {
+    const ids = new Set(caja.cajerosAsignados.map((c) => c.id));
+    return this.cajeros().filter((c) => !ids.has(c.id));
+    // En el desplegable solo los que NO están ya en esta caja.
+  }
+
+  elegir(cajaId: number, evento: Event): void {
+    const valor = Number((evento.target as HTMLSelectElement).value);
+    this.seleccion.update((actual) => ({ ...actual, [cajaId]: valor }));
+    // ═══ .update() EN VEZ DE .set() ═══
+    // update recibe el valor ANTERIOR y devuelve el nuevo.
+    // Lo necesito porque solo cambio UNA caja del objeto y quiero
+    // conservar las demás. Es el setState((prev) => ...) de React.
+  }
+
+  private ejecutar(accion: Observable<{ mensaje: string }>): void {
     this.ocupado.set(true);
+    this.error.set(null);
+    this.mensaje.set(null);
 
     accion.subscribe({
-      next: () => {
-        this.exito.set(mensajeExito);
+      next: (r) => {
+        this.mensaje.set(r.mensaje);
+        this.seleccion.set({});
         this.ocupado.set(false);
         this.cargar();
       },
@@ -79,24 +81,25 @@ export class Caja {
         this.ocupado.set(false);
         this.error.set(
           e.status === 403 ? 'No tienes permiso para esta acción'
-            : (e.error?.mensaje ?? 'No se pudo completar la acción')
+            : (e.error?.mensaje ?? 'No se pudo completar')
         );
-        // Aquí llegan las reglas del backend: "otro cajero está
-        // operando esta caja" (409), "debes abrir una sesión antes
-        // de atender turnos" (409). El servidor manda.
+        // Aquí llegan las reglas del backend: "máximo 2 cajeros",
+        // "no se puede quitar: tiene la caja abierta".
       },
     });
   }
 
-  abrir(cajaId: number): void {
-    this.ejecutar(this.servicio.abrirCaja(cajaId), 'Sesión abierta');
+  asignar(cajaId: number): void {
+    const usuarioId = this.seleccion()[cajaId];
+    if (!usuarioId) {
+      this.error.set('Elige un cajero primero');
+      return;
+    }
+    this.ejecutar(this.turnosService.asignarCajero(cajaId, usuarioId));
   }
 
-  cerrar(): void {
-    this.ejecutar(this.servicio.cerrarCaja(), 'Sesión cerrada');
-  }
-
-  atender(turno: Turno): void {
-    this.ejecutar(this.servicio.atender(turno.id), `Turno ${turno.codigo} atendido`);
+  quitar(cajaId: number, cajero: CajeroAsignado): void {
+    if (!window.confirm(`¿Quitar a ${cajero.username} de esta caja?`)) return;
+    this.ejecutar(this.turnosService.quitarCajero(cajaId, cajero.id));
   }
 }

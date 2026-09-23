@@ -78,7 +78,8 @@ public class AppDbContext : DbContext
                 new OpcionMenu { Id = 4, Etiqueta = "Asignación de turnos", Ruta = "/turnos", Orden = 4, Activo = true },
                 new OpcionMenu { Id = 5, Etiqueta = "Procesos de caja", Ruta = "/caja", Orden = 5, Activo = true },
                 new OpcionMenu { Id = 6, Etiqueta = "Clientes", Ruta = "/clientes/nuevo", Orden = 6, Activo = true },
-                new OpcionMenu { Id = 7, Etiqueta = "Carga masiva", Ruta = "/clientes/carga", Orden = 7, Activo = true }
+                new OpcionMenu { Id = 7, Etiqueta = "Carga masiva", Ruta = "/clientes/carga", Orden = 7, Activo = true },
+                new OpcionMenu { Id = 8, Etiqueta = "Asignación de cajas", Ruta = "/cajas", Orden = 8, Activo = true }
             );
         });
 
@@ -93,7 +94,8 @@ public class AppDbContext : DbContext
                 new { OpcionMenuId = 3, RolId = 1 }, new { OpcionMenuId = 4, RolId = 2 },
                 new { OpcionMenuId = 5, RolId = 3 }, new { OpcionMenuId = 6, RolId = 3 },
                 new { OpcionMenuId = 7, RolId = 3 },
-                new { OpcionMenuId = 3, RolId = 2 }
+                new { OpcionMenuId = 3, RolId = 2 },
+                new { OpcionMenuId = 8, RolId = 2 }
             );
         });
 

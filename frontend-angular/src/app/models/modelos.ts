@@ -110,6 +110,18 @@ export interface CajaLista {
     nombre: string;
 }
 
+export interface CajeroAsignado {
+    id: number;
+    username: string;
+}
+
+export interface CajaDetalle extends CajaLista {
+    cajerosAsignados: CajeroAsignado[];
+    ocupadaPor: string | null;
+}
+// "extends" hereda id y nombre de CajaLista y agrega lo demás.
+// La pantalla de turnos sigue usando CajaLista sin enterarse del cambio.
+
 export interface TipoAtencion {
     id: number;
     codigo: string;        // "AC", "PS"
