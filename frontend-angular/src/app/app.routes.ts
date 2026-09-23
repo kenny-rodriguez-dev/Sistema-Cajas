@@ -8,9 +8,6 @@ export const routes: Routes = [
     {
         path: 'login',
         loadComponent: () => import('./pages/login/login').then((m) => m.Login),
-        // Fíjate: la ruta del archivo SIN extensión y SIN ".component",
-        // y el nombre de la clase tal como está escrito dentro del archivo.
-        // Esos dos tienen que coincidir exactamente o el import no resuelve.
     },
     {
         path: 'recuperar',
@@ -26,8 +23,6 @@ export const routes: Routes = [
         path: '',
         loadComponent: () => import('./layouts/privado/privado').then((m) => m.Privado),
         canActivate: [authGuard],
-        // Un solo guard protege todo el bloque de hijas.
-
         children: [
             {
                 path: 'bienvenida',
@@ -37,6 +32,16 @@ export const routes: Routes = [
                 path: 'dashboard',
                 canActivate: [rolGuard(['Administrador'])],
                 loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard),
+            },
+            {
+                path: 'clientes',
+                pathMatch: 'full',
+                // pathMatch 'full' = esta ruta solo coincide con /clientes EXACTO.
+                // Sin esto, Angular podría intentar usarla para /clientes/nuevo
+                // por coincidir el comienzo. Así queda explícito.
+                canActivate: [rolGuard(['Cajero'])],
+                loadComponent: () =>
+                    import('./pages/clientes/lista/clientes-lista').then((m) => m.ClientesLista),
             },
             {
                 path: 'clientes/nuevo',
@@ -61,6 +66,14 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/turnos/turnos').then((m) => m.Turnos),
             },
             {
+                path: 'cajas',
+                // La URL sigue siendo /cajas: es la que está guardada en el menú
+                // de la base de datos. Lo que cambió es el nombre del componente.
+                canActivate: [rolGuard(['Gestor'])],
+                loadComponent: () =>
+                    import('./pages/asignacion-cajas/asignacion-cajas').then((m) => m.AsignacionCajas),
+            },
+            {
                 path: 'caja',
                 canActivate: [rolGuard(['Cajero'])],
                 loadComponent: () => import('./pages/caja/caja').then((m) => m.Caja),
@@ -69,11 +82,6 @@ export const routes: Routes = [
                 path: 'en-construccion',
                 loadComponent: () =>
                     import('./pages/en-construccion/en-construccion').then((m) => m.EnConstruccion),
-            },
-            {
-                path: 'cajas',
-                canActivate: [rolGuard(['Gestor'])],
-                loadComponent: () => import('./pages/caja/caja').then((m) => m.Caja),
             },
         ],
     },

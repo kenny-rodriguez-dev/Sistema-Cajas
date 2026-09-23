@@ -149,3 +149,14 @@ export interface MisCajasRespuesta {
     miSesionCajaId: number | null;   // null = no tengo ninguna abierta
     cajas: MiCaja[];
 }
+
+export interface Cliente extends CrearClienteDto {
+    id: number;
+    activo: boolean;
+}
+// Hereda los siete campos de CrearClienteDto y agrega dos.
+
+export type ActualizarClienteDto = Omit<CrearClienteDto, 'identificacion'>;
+// "Todo lo de CrearClienteDto menos la identificación".
+// Es un "type" y no una "interface" porque Omit produce un tipo
+// calculado, y las interfaces no pueden declararse así.

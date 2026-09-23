@@ -1,0 +1,149 @@
+<main class="p-8 max-w-5xl">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Clientes</h1>
+        <div class="flex gap-2">
+            <a routerLink="/clientes/carga" class="border rounded px-4 py-2 text-sm">Carga masiva</a>
+            <a routerLink="/clientes/nuevo" class="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">
+                + Nuevo cliente
+            </a>
+        </div>
+    </div>
+
+    @if (mensaje()) {
+    <div class="mb-4 p-3 rounded bg-green-100 text-green-800">{{ mensaje() }}</div>
+    }
+    @if (error()) {
+    <div class="mb-4 p-3 rounded bg-red-100 text-red-800">{{ error() }}</div>
+    }
+
+    <!-- ─── BUSCAR ─── -->
+    <div class="bg-white border rounded-lg p-5 mb-6">
+        <h2 class="font-semibold mb-3">Buscar por identificación</h2>
+        <div class="flex gap-2">
+            <input [formControl]="busqueda" (keydown.enter)="buscar()" inputmode="numeric" placeholder="0912345678"
+                class="flex-1 border rounded px-3 py-2 text-sm" />
+            <!-- (keydown.enter): Angular filtra la tecla por ti. Solo se
+           dispara con Enter, sin tener que revisar e.key a mano. -->
+            <button (click)="buscar()" class="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium">
+                Buscar
+            </button>
+        </div>
+
+        @if (encontrado(); as c) {
+        <div class="mt-4 p-4 bg-gray-50 rounded flex justify-between items-center">
+            <div>
+                <p class="font-medium">
+                    {{ c.nombres }} {{ c.apellidos }}
+                    @if (!c.activo) {
+                    <span class="ml-2 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Inactivo</span>
+                    }
+                </p>
+                <p class="text-sm text-gray-500">{{ c.correo }} · {{ c.telefono }}</p>
+            </div>
+            <button (click)="empezarEdicion(c)" class="text-sm text-blue-600 underline">Editar</button>
+        </div>
+        }
+
+        @if (noExiste()) {
+        <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded text-sm">
+            No hay ningún cliente con esa identificación.
+            <a routerLink="/clientes/nuevo" class="text-blue-600 underline font-medium">Registrarlo como nuevo</a>
+        </div>
+        }
+    </div>
+
+    <!-- ─── EDICIÓN ─── -->
+    @if (editando(); as c) {
+    <div class="bg-white border-2 border-blue-200 rounded-lg p-5 mb-6">
+        <h2 class="font-semibold mb-1">Editar cliente</h2>
+        <p class="text-sm text-gray-500 mb-4">
+            Identificación: <span class="font-mono">{{ c.identificacion }}</span> (no se puede modificar)
+        </p>
+
+        <form [formGroup]="edicion" (ngSubmit)="guardar()">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @for (campo of campos; track campo.clave) {
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">{{ campo.etiqueta }}</label>
+                    <input [formControlName]="campo.clave" class="w-full border rounded px-3 py-2 text-sm"
+                        [class.border-red-500]="mensajeDe(campo.clave)" />
+                    @if (mensajeDe(campo.clave); as m) {
+                    <p class="text-red-600 text-xs mt-1">{{ m }}</p>
+                    }
+                </div>
+                }
+                <!-- [formControlName] CON corchetes: el nombre viene de una
+               variable (campo.clave), no es un texto fijo. Sin corchetes,
+               Angular buscaría un control llamado literalmente "campo.clave". -->
+            </div>
+
+            <div class="flex gap-2 mt-4">
+                <button type="submit" [disabled]="ocupado()"
+                    class="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium disabled:bg-gray-400">
+                    {{ ocupado() ? 'Guardando...' : 'Guardar cambios' }}
+                </button>
+                <button type="button" (click)="cancelarEdicion()" class="border rounded px-5 py-2 text-sm">
+                    Cancelar
+                </button>
+                <!-- type="button" en Cancelar. Sin él, un botón dentro de un
+               <form> es "submit" por defecto y guardaría en vez de cancelar. -->
+            </div>
+        </form>
+    </div>
+    }
+
+    <!-- ─── LISTA ─── -->
+    @if (cargando()) {
+    <p class="text-gray-500">Cargando...</p>
+    } @else {
+    <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold">Todos ({{ clientes().length }})</h2>
+        <label class="flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" [checked]="incluirInactivos()" (change)="alternarInactivos()" />
+            Mostrar inactivos
+        </label>
+    </div>
+
+    <table class="w-full bg-white border rounded-lg overflow-hidden text-sm">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="text-left px-4 py-2">Cliente</th>
+                <th class="text-left px-4 py-2">Identificación</th>
+                <th class="text-left px-4 py-2">Teléfono</th>
+                <th class="text-left px-4 py-2">Estado</th>
+                <th class="text-left px-4 py-2">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (c of clientes(); track c.id) {
+            <tr class="border-t" [class.opacity-60]="!c.activo">
+                <td class="px-4 py-2 font-medium">{{ c.apellidos }} {{ c.nombres }}</td>
+                <td class="px-4 py-2 font-mono">{{ c.identificacion }}</td>
+                <td class="px-4 py-2">{{ c.telefono }}</td>
+                <td class="px-4 py-2">
+                    <span class="px-2 py-1 rounded text-xs" [class.bg-green-100]="c.activo"
+                        [class.text-green-800]="c.activo" [class.bg-gray-100]="!c.activo"
+                        [class.text-gray-500]="!c.activo">
+                        {{ c.activo ? 'Activo' : 'Inactivo' }}
+                    </span>
+                </td>
+                <td class="px-4 py-2">
+                    <div class="flex gap-3">
+                        <button (click)="empezarEdicion(c)"
+                            class="text-xs text-blue-600 hover:underline">Editar</button>
+                        <button (click)="cambiarEstado(c)" [disabled]="ocupado()"
+                            class="text-xs text-gray-600 hover:underline disabled:text-gray-300">
+                            {{ c.activo ? 'Desactivar' : 'Activar' }}
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            } @empty {
+            <tr>
+                <td colspan="5" class="px-4 py-6 text-center text-gray-400">No hay clientes</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+    }
+</main>

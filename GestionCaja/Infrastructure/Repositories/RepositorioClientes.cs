@@ -5,37 +5,41 @@ using Infrastructure.Data;
 
 namespace Infrastructure.Repositories;
 
-// LA IMPLEMENTACIÓN. Aquí sí vive Entity Framework, y aquí SOLO.
-//
-// Los dos puntos significan "yo cumplo ese contrato". Si me falta
-// un método de la interfaz, el compilador no me deja compilar.
 public class RepositorioClientes : IRepositorioClientes
 {
     private readonly AppDbContext _contexto;
 
-    public RepositorioClientes(AppDbContext contexto)
-    {
-        _contexto = contexto;
-    }
+    public RepositorioClientes(AppDbContext contexto) => _contexto = contexto;
 
-    public async Task<List<Cliente>> ListarActivosAsync()
-    {
-        return await _contexto.Clientes
-            .Where(c => c.Activo)
+    public async Task<List<Cliente>> ListarAsync(bool incluirInactivos) =>
+        await _contexto.Clientes
+            .Where(c => incluirInactivos || c.Activo)
+            // Si incluirInactivos es true, la condición siempre se cumple
+            // y trae todos. Si es false, solo los activos. Una consulta
+            // en vez de dos métodos casi iguales.
+            .OrderBy(c => c.Apellidos).ThenBy(c => c.Nombres)
             .ToListAsync();
-    }
 
-    public async Task<Cliente?> ObtenerPorIdAsync(int id)
-    {
-        return await _contexto.Clientes
-            .FirstOrDefaultAsync(c => c.Id == id && c.Activo);
-    }
+    public async Task<Cliente?> ObtenerPorIdAsync(int id) =>
+        await _contexto.Clientes.FirstOrDefaultAsync(c => c.Id == id && c.Activo);
 
-    public async Task<bool> ExisteIdentificacionAsync(string identificacion)
-    {
-        return await _contexto.Clientes
-            .AnyAsync(c => c.Identificacion == identificacion);
-    }
+    public async Task<Cliente?> ObtenerParaEditarAsync(int id) =>
+        await _contexto.Clientes.FirstOrDefaultAsync(c => c.Id == id);
+    // SIN filtrar por Activo. Para reactivar a un cliente hay que
+    // poder encontrarlo aunque esté desactivado.
+
+    public async Task<Cliente?> BuscarPorIdentificacionAsync(string identificacion) =>
+        await _contexto.Clientes.FirstOrDefaultAsync(c => c.Identificacion == identificacion);
+    // Esta búsqueda es rapidísima aunque haya un millón de clientes:
+    // la columna tiene el índice único que creaste en la rebanada 1A.
+    // SQL Server va directo a la fila sin recorrer la tabla.
+
+    public async Task<bool> ExisteIdentificacionAsync(string identificacion) =>
+        await _contexto.Clientes.AnyAsync(c => c.Identificacion == identificacion);
+
+    public async Task<bool> TieneContratoActivoAsync(int clienteId) =>
+        await _contexto.Contratos.AnyAsync(c =>
+            c.ClienteId == clienteId && (c.Estado == "VIG" || c.Estado == "REN"));
 
     public async Task AgregarAsync(Cliente cliente)
     {
@@ -44,23 +48,16 @@ public class RepositorioClientes : IRepositorioClientes
     }
 
     public async Task<List<string>> ObtenerIdentificacionesAsync(List<string> identificaciones) =>
-    await _contexto.Clientes
-        .Where(c => identificaciones.Contains(c.Identificacion))
-        .Select(c => c.Identificacion)
-        .ToListAsync();
-    // ═══ UNA SOLA CONSULTA, NO UNA POR FILA ═══
-    //
-    // Lo ingenuo sería recorrer las 500 filas preguntando una por una:
-    // 500 viajes a la base de datos.
-    //
-    // Contains() se traduce a "WHERE Identificacion IN (...)": UN viaje.
-    // Ese problema tiene nombre y te lo van a preguntar: N+1 queries.
+        await _contexto.Clientes
+            .Where(c => identificaciones.Contains(c.Identificacion))
+            .Select(c => c.Identificacion)
+            .ToListAsync();
 
     public async Task AgregarVariosAsync(List<Cliente> clientes)
     {
         _contexto.Clientes.AddRange(clientes);
         await _contexto.SaveChangesAsync();
-        // AddRange + un solo SaveChanges = EF agrupa todos los INSERT
-        // en una sola transacción. Si uno falla, no entra ninguno.
     }
+
+    public async Task GuardarAsync() => await _contexto.SaveChangesAsync();
 }

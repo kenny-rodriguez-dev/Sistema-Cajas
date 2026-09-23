@@ -381,7 +381,7 @@ namespace Infrastructure.Migrations
                             Activo = true,
                             Etiqueta = "Clientes",
                             Orden = 6,
-                            Ruta = "/clientes/nuevo"
+                            Ruta = "/clientes"
                         },
                         new
                         {
