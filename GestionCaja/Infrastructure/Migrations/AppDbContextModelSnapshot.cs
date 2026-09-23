@@ -398,6 +398,14 @@ namespace Infrastructure.Migrations
                             Etiqueta = "Asignación de cajas",
                             Orden = 8,
                             Ruta = "/cajas"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Activo = true,
+                            Etiqueta = "Atención al cliente",
+                            Orden = 9,
+                            Ruta = "/atencion"
                         });
                 });
 
@@ -470,7 +478,59 @@ namespace Infrastructure.Migrations
                         {
                             OpcionMenuId = 8,
                             RolId = 2
+                        },
+                        new
+                        {
+                            OpcionMenuId = 9,
+                            RolId = 3
                         });
+                });
+
+            modelBuilder.Entity("Domain.Entities.Pago", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ContratoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaPago")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FormaPagoId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Periodo")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nchar(7)")
+                        .IsFixedLength();
+
+                    b.Property<int>("RegistradoPorUsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContratoId");
+
+                    b.HasIndex("FormaPagoId");
+
+                    b.HasIndex("RegistradoPorUsuarioId");
+
+                    b.HasIndex("ClienteId", "Periodo")
+                        .IsUnique();
+
+                    b.ToTable("Pagos");
                 });
 
             modelBuilder.Entity("Domain.Entities.Rol", b =>
@@ -902,6 +962,41 @@ namespace Infrastructure.Migrations
                     b.Navigation("OpcionMenu");
 
                     b.Navigation("Rol");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Pago", b =>
+                {
+                    b.HasOne("Domain.Entities.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Contrato", "Contrato")
+                        .WithMany()
+                        .HasForeignKey("ContratoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.FormaPago", "FormaPago")
+                        .WithMany()
+                        .HasForeignKey("FormaPagoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Usuario", "RegistradoPorUsuario")
+                        .WithMany()
+                        .HasForeignKey("RegistradoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("Contrato");
+
+                    b.Navigation("FormaPago");
+
+                    b.Navigation("RegistradoPorUsuario");
                 });
 
             modelBuilder.Entity("Domain.Entities.SesionCaja", b =>

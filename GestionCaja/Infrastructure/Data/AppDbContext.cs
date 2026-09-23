@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<FormaPago> FormasPago => Set<FormaPago>();
     public DbSet<Contrato> Contratos => Set<Contrato>();
     public DbSet<TokenRecuperacion> TokensRecuperacion => Set<TokenRecuperacion>();
+    public DbSet<Pago> Pagos => Set<Pago>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -79,7 +80,8 @@ public class AppDbContext : DbContext
                 new OpcionMenu { Id = 5, Etiqueta = "Procesos de caja", Ruta = "/caja", Orden = 5, Activo = true },
                 new OpcionMenu { Id = 6, Etiqueta = "Clientes", Ruta = "/clientes", Orden = 6, Activo = true },
                 new OpcionMenu { Id = 7, Etiqueta = "Carga masiva", Ruta = "/clientes/carga", Orden = 7, Activo = true },
-                new OpcionMenu { Id = 8, Etiqueta = "Asignación de cajas", Ruta = "/cajas", Orden = 8, Activo = true }
+                new OpcionMenu { Id = 8, Etiqueta = "Asignación de cajas", Ruta = "/cajas", Orden = 8, Activo = true },
+                new OpcionMenu { Id = 9, Etiqueta = "Atención al cliente", Ruta = "/atencion", Orden = 9, Activo = true }
             );
         });
 
@@ -95,7 +97,8 @@ public class AppDbContext : DbContext
                 new { OpcionMenuId = 5, RolId = 3 }, new { OpcionMenuId = 6, RolId = 3 },
                 new { OpcionMenuId = 7, RolId = 3 },
                 new { OpcionMenuId = 3, RolId = 2 },
-                new { OpcionMenuId = 8, RolId = 2 }
+                new { OpcionMenuId = 8, RolId = 2 },
+                new { OpcionMenuId = 9, RolId = 3 }
             );
         });
 
@@ -295,6 +298,32 @@ public class AppDbContext : DbContext
             // Cascade aquí SÍ tiene sentido, al revés que en el resto
             // del proyecto: si se borrara un usuario, sus tokens de
             // recuperación no le sirven a nadie. No son historial.
+        });
+
+        // ─── PAGO ───
+        modelo.Entity<Pago>(entidad =>
+        {
+            entidad.Property(p => p.Periodo).HasMaxLength(7).IsFixedLength().IsRequired();
+            // CHAR(7): el largo siempre es el mismo.
+
+            entidad.Property(p => p.Monto).HasPrecision(10, 2);
+
+            entidad.HasIndex(p => new { p.ClienteId, p.Periodo }).IsUnique();
+            // ═══ UN MES, UN PAGO, POR CLIENTE ═══
+            // Capa 4. Aunque dos cajeros cobren el mismo mes al mismo
+            // cliente en el mismo instante, SQL Server deja entrar solo
+            // a uno. El mismo patrón de la sesión de caja.
+
+            entidad.HasOne(p => p.Cliente).WithMany()
+                   .HasForeignKey(p => p.ClienteId).OnDelete(DeleteBehavior.Restrict);
+            entidad.HasOne(p => p.Contrato).WithMany()
+                   .HasForeignKey(p => p.ContratoId).OnDelete(DeleteBehavior.Restrict);
+            entidad.HasOne(p => p.FormaPago).WithMany()
+                   .HasForeignKey(p => p.FormaPagoId).OnDelete(DeleteBehavior.Restrict);
+            entidad.HasOne(p => p.RegistradoPorUsuario).WithMany()
+                   .HasForeignKey(p => p.RegistradoPorUsuarioId).OnDelete(DeleteBehavior.Restrict);
+            // Restrict en todas: un pago es historia financiera.
+            // Nada puede borrarse si arrastra pagos con él.
         });
     }
     protected override void ConfigureConventions(ModelConfigurationBuilder configuracion)

@@ -1,6 +1,6 @@
 @host = http://localhost:5219
 
-@tokenCajero = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiJkODUyZWQ3MC1jYzgwLTQ1ZTYtYjUyYS1jMDFiZDMwOTNhNWIiLCJleHAiOjE3ODkxNDg2MjksImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.qXNLraAAQa0Bue_DoScU_l8pkFDq54gq9b8a227T5mQ
+@tokenCajero = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiIzMTgzMjI2ZC1lMGMxLTRjOWQtOWNkNS0yNmVhNTgzMWYxZDQiLCJleHAiOjE3OTAyMDcyOTEsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.FnrVj3uvPDZPfahFRvYgi9fHaYI-ZXVqPcb7SWiPY0Y
 
 ### 1. Login CAJERO
 POST {{host}}/api/auth/login
@@ -8,93 +8,58 @@ Content-Type: application/json
 
 { "username": "cajero0001", "password": "Cajero1234" }
 
-### 2. Crear un cliente
-POST {{host}}/api/clientes
+### 2. Pagar SIN caja abierta -> 409
+POST {{host}}/api/pagos
 Authorization: Bearer {{tokenCajero}}
 Content-Type: application/json
 
-{
-  "nombres": "Maria",
-  "apellidos": "Torres",
-  "identificacion": "0955512345",
-  "correo": "maria@ejemplo.com",
-  "telefono": "0991234567",
-  "direccion": "Ciudadela Los Rosales manzana 5 villa 12",
-  "referenciaDireccion": "Frente al parque central junto a la farmacia"
-}
+{ "contratoId": 3, "periodo": "2026-09" }
 
-### 3. Ver los servicios disponibles
-GET {{host}}/api/contratos/servicios
+### 3. Abrir la caja 1
+POST {{host}}/api/cajas/1/abrir
 Authorization: Bearer {{tokenCajero}}
 
-### 4. Contratar el Básico (50 Mbps) por 12 meses
-POST {{host}}/api/contratos
-Authorization: Bearer {{tokenCajero}}
-Content-Type: application/json
-
-{ "clienteId": 1, "servicioId": 1, "formaPagoId": 1, "mesesDuracion": 12 }
-
-### ⭐ ANOTA LA "fechaFin" QUE DEVUELVE ESTE BLOQUE
-
-### 5. Intentar contratar otra vez -> 409
-POST {{host}}/api/contratos
-Authorization: Bearer {{tokenCajero}}
-Content-Type: application/json
-
-{ "clienteId": 1, "servicioId": 2, "formaPagoId": 1, "mesesDuracion": 12 }
-
-### 6. ⭐ CAMBIO A MAYOR VELOCIDAD (Premium, 200 Mbps)
-POST {{host}}/api/contratos/1/cambiar-servicio
-Authorization: Bearer {{tokenCajero}}
-Content-Type: application/json
-
-{ "nuevoServicioId": 3 }
-
-### ⭐ COMPARA la "fechaFinConservada" con la del bloque 4: SON IGUALES
-
-### 7. El historial: contrato 1 en SUS, contrato 2 en REN
+### 4. Ver los contratos del cliente 1 (busca el que esté en VIG o REN)
 GET {{host}}/api/contratos/cliente/1
 Authorization: Bearer {{tokenCajero}}
 
-### 8. Cambiar la forma de pago del contrato 2
-POST {{host}}/api/contratos/2/cambiar-forma-pago
+### 5. Pagar septiembre -> 200, con el monto del servicio
+# Cambia el contratoId por el del contrato ACTIVO del paso 4
+POST {{host}}/api/pagos
 Authorization: Bearer {{tokenCajero}}
 Content-Type: application/json
 
-{ "nuevaFormaPagoId": 2 }
+{ "contratoId": 3, "periodo": "2026-09" }
 
-### 9. Intentar cambiar el contrato SUSTITUIDO -> 409
-POST {{host}}/api/contratos/1/cambiar-servicio
+### 6. Pagar septiembre OTRA VEZ -> 409
+POST {{host}}/api/pagos
 Authorization: Bearer {{tokenCajero}}
 Content-Type: application/json
 
-{ "nuevoServicioId": 2 }
+{ "contratoId": 3, "periodo": "2026-09" }
 
-### 10. Cancelar el contrato vigente
-POST {{host}}/api/contratos/2/cancelar
-Authorization: Bearer {{tokenCajero}}
-
-### 11. Historial final: SUS y CAN. La fechaFin del 2 cambió a hoy
-GET {{host}}/api/contratos/cliente/1
-Authorization: Bearer {{tokenCajero}}
-
-### 12. Ahora que no tiene activo, puede contratar de nuevo -> 200
-POST {{host}}/api/contratos
+### 7. Intentar mandar el monto -> se ignora
+POST {{host}}/api/pagos
 Authorization: Bearer {{tokenCajero}}
 Content-Type: application/json
 
-{ "clienteId": 1, "servicioId": 2, "formaPagoId": 1, "mesesDuracion": 6 }
+{ "contratoId": 3, "periodo": "2026-10", "monto": 0.01 }
 
-
-### El editor .http de Visual Studio no soporta adjuntar archivos
-### Carga masiva de clientes
-POST {{host}}/api/clientes/carga-masiva
+### 8. Periodo inválido -> 400
+POST {{host}}/api/pagos
 Authorization: Bearer {{tokenCajero}}
-Content-Type: multipart/form-data; boundary=LIMITE
+Content-Type: application/json
 
---LIMITE
-Content-Disposition: form-data; name="archivo"; filename="clientes.xlsx"
-Content-Type: application/octet-stream
+{ "contratoId": 3, "periodo": "2026-13" }
 
-< ./clientes.xlsx
---LIMITE--
+### 9. Historial de pagos del cliente 1
+GET {{host}}/api/pagos/cliente/1
+Authorization: Bearer {{tokenCajero}}
+
+### 10. Cobrar un contrato SUSTITUIDO -> 409
+# Usa el id de un contrato en estado SUS del paso 4
+POST {{host}}/api/pagos
+Authorization: Bearer {{tokenCajero}}
+Content-Type: application/json
+
+{ "contratoId": 1, "periodo": "2026-11" }
