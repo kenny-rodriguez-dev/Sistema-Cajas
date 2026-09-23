@@ -1,0 +1,38 @@
+<main class="min-h-screen flex items-center justify-center bg-gray-50">
+    <div class="w-full max-w-sm bg-white p-8 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-2 text-center">Recuperar contraseña</h1>
+
+        @if (enviado()) {
+        <div class="mt-4 p-4 rounded bg-green-50 border border-green-200 text-sm text-green-900">
+            Si el correo está registrado, recibirás instrucciones para
+            restablecer tu contraseña. El enlace expira en 15 minutos.
+        </div>
+        <p class="mt-4 text-xs text-gray-500 text-center">
+            En desarrollo, el enlace se imprime en la consola del backend.
+        </p>
+        } @else {
+        <p class="text-sm text-gray-600 mb-6 text-center">
+            Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña.
+        </p>
+
+        @if (error()) {
+        <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm">{{ error() }}</div>
+        }
+
+        <form [formGroup]="formulario" (ngSubmit)="enviar()">
+            <label class="block text-sm font-medium mb-1">Correo</label>
+            <input type="email" formControlName="correo" autocomplete="email"
+                class="w-full border border-gray-300 rounded px-3 py-2 mb-4" />
+
+            <button type="submit" [disabled]="enviando()"
+                class="w-full bg-blue-600 text-white rounded py-2 font-medium disabled:bg-gray-400">
+                {{ enviando() ? 'Enviando...' : 'Enviar enlace' }}
+            </button>
+        </form>
+        }
+
+        <a routerLink="/login" class="block mt-4 text-center text-sm text-blue-600 underline">
+            Volver al inicio de sesión
+        </a>
+    </div>
+</main>

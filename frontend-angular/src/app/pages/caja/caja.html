@@ -1,0 +1,90 @@
+<main class="p-8 max-w-4xl">
+    <h1 class="text-2xl font-bold mb-6">Procesos de caja</h1>
+
+    @if (error()) {
+    <div class="mb-4 p-3 rounded bg-red-100 text-red-800">{{ error() }}</div>
+    }
+    @if (exito()) {
+    <div class="mb-4 p-3 rounded bg-green-100 text-green-800">{{ exito() }}</div>
+    }
+
+    @if (cargando()) {
+    <p class="text-gray-500">Cargando...</p>
+    } @else {
+    <h2 class="text-lg font-semibold mb-3">Mis cajas asignadas</h2>
+
+    @if (cajas().length === 0) {
+    <div class="bg-amber-50 border border-amber-200 rounded p-4 text-sm text-amber-900 mb-6">
+        No tienes cajas asignadas. Un gestor debe asignarte una antes de que puedas operar.
+    </div>
+    }
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        @for (c of cajas(); track c.id) {
+        <div class="bg-white border rounded-lg p-5">
+            <div class="flex justify-between items-start mb-3">
+                <p class="font-semibold text-lg">{{ c.nombre }}</p>
+
+                @if (c.esMia) {
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">La tienes abierta</span>
+                } @else if (c.ocupadaPor) {
+                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                    Ocupada por {{ c.ocupadaPor }}
+                </span>
+                } @else {
+                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Libre</span>
+                }
+            </div>
+
+            @if (c.esMia) {
+            <button (click)="cerrar()" [disabled]="ocupado()"
+                class="w-full bg-gray-700 text-white rounded py-2 text-sm font-medium disabled:bg-gray-400">
+                Cerrar sesión de caja
+            </button>
+            } @else {
+            <button (click)="abrir(c.id)" [disabled]="ocupado() || c.ocupadaPor !== null || miSesionCajaId() !== null"
+                class="w-full bg-blue-600 text-white rounded py-2 text-sm font-medium
+                           disabled:bg-gray-400 disabled:cursor-not-allowed">
+                @if (c.ocupadaPor) { Ocupada }
+                @else if (miSesionCajaId() !== null) { Ya tienes otra abierta }
+                @else { Abrir caja }
+            </button>
+            <!-- El botón se apaga en tres casos. Es comodidad:
+                 lo que de verdad impide el doble uso es el índice
+                 único filtrado de SQL Server. Capa 1 y capa 2. -->
+            }
+        </div>
+        }
+    </div>
+
+    @if (miSesionCajaId() !== null) {
+    <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold">Turnos pendientes ({{ turnosDeMiCaja().length }})</h2>
+        <button (click)="cargar()" class="text-sm text-blue-600 underline">Actualizar</button>
+    </div>
+
+    @if (turnosDeMiCaja().length === 0) {
+    <div class="bg-white border rounded-lg p-6 text-center text-gray-400">
+        No hay turnos pendientes en tu caja
+    </div>
+    } @else {
+    <div class="space-y-2">
+        @for (t of turnosDeMiCaja(); track t.id) {
+        <div class="bg-white border rounded-lg p-4 flex justify-between items-center">
+            <div>
+                <p class="font-mono font-bold text-xl">{{ t.codigo }}</p>
+                <p class="text-sm text-gray-500">{{ t.tipoAtencion }}</p>
+            </div>
+            <button (click)="atender(t)" [disabled]="ocupado()"
+                class="bg-green-600 text-white rounded px-5 py-2 text-sm font-medium disabled:bg-gray-400">
+                Atender
+            </button>
+        </div>
+        }
+    </div>
+    }
+    }
+    <!-- La lista solo aparece si tengo una caja abierta. Coincide con
+         la regla del backend: atender sin sesión da 409. -->
+    }
+</main>

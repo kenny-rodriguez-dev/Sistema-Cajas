@@ -1,0 +1,92 @@
+<main class="p-8 max-w-4xl">
+    <h1 class="text-2xl font-bold mb-6">Asignación de turnos</h1>
+
+    @if (cargando()) {
+    <p class="text-gray-500">Cargando...</p>
+    } @else {
+    <div class="bg-white border rounded-lg p-5 mb-6">
+        <form [formGroup]="formulario" (ngSubmit)="generar()" class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Caja</label>
+                <select formControlName="cajaId" class="border rounded px-3 py-2 text-sm min-w-40">
+                    <option [ngValue]="0">Selecciona...</option>
+                    @for (c of cajas(); track c.id) {
+                    <option [ngValue]="c.id">{{ c.nombre }}</option>
+                    }
+                </select>
+                <!-- [ngValue] entrega el NÚMERO. Con value= entregaría texto
+               y el backend rechazaría el dato. -->
+            </div>
+
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Tipo de atención</label>
+                <select formControlName="tipoAtencionId" class="border rounded px-3 py-2 text-sm min-w-56">
+                    <option [ngValue]="0">Selecciona...</option>
+                    @for (t of tipos(); track t.id) {
+                    <option [ngValue]="t.id">{{ t.codigo }} — {{ t.descripcion }}</option>
+                    }
+                </select>
+            </div>
+
+            <button type="submit" [disabled]="generando()"
+                class="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium disabled:bg-gray-400">
+                {{ generando() ? 'Generando...' : 'Generar turno' }}
+            </button>
+        </form>
+
+        @if (ultimoCodigo(); as codigo) {
+        <div class="mt-5 p-4 bg-green-50 border border-green-200 rounded text-center">
+            <p class="text-sm text-green-800">Turno generado</p>
+            <p class="text-4xl font-bold font-mono text-green-900 mt-1">{{ codigo }}</p>
+        </div>
+        }
+        <!-- font-mono: todos los dígitos ocupan lo mismo, así el código
+           no "baila" al cambiar. Es el número que lee el cliente. -->
+    </div>
+
+    @if (error()) {
+    <div class="mb-4 p-3 rounded bg-red-100 text-red-800">{{ error() }}</div>
+    }
+
+    <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold">Turnos de hoy ({{ turnos().length }})</h2>
+        <button (click)="recargarTurnos()" class="text-sm text-blue-600 underline">Actualizar</button>
+    </div>
+
+    <table class="w-full bg-white border rounded-lg overflow-hidden text-sm">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="text-left px-4 py-2">Código</th>
+                <th class="text-left px-4 py-2">Tipo</th>
+                <th class="text-left px-4 py-2">Caja</th>
+                <th class="text-left px-4 py-2">Estado</th>
+                <th class="text-left px-4 py-2">Atendido por</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (t of turnos(); track t.id) {
+            <tr class="border-t">
+                <td class="px-4 py-2 font-mono font-medium">{{ t.codigo }}</td>
+                <td class="px-4 py-2">{{ t.tipoAtencion }}</td>
+                <td class="px-4 py-2">{{ t.caja }}</td>
+                <td class="px-4 py-2">
+                    <span class="px-2 py-1 rounded text-xs {{ etiqueta(t.estado).clase }}">
+                        {{ etiqueta(t.estado).texto }}
+                    </span>
+                    <!-- Interpolación DENTRO del atributo class: mezcla clases
+                   fijas con una calculada. Más corto que varios
+                   [class.loQueSea] cuando el valor viene de un método. -->
+                </td>
+                <td class="px-4 py-2 text-gray-600">{{ t.atendidoPor ?? '—' }}</td>
+            </tr>
+            } @empty {
+            <tr>
+                <td colspan="5" class="px-4 py-6 text-center text-gray-400">
+                    Todavía no hay turnos hoy
+                </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+    }
+</main>

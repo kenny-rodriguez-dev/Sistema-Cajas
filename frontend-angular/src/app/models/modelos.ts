@@ -103,3 +103,37 @@ export interface DashboardDto {
     turnosPendientes: number;
     contratosActivos: number;
 }
+
+// ─── TURNOS Y CAJAS ───
+export interface CajaLista {
+    id: number;
+    nombre: string;
+}
+
+export interface TipoAtencion {
+    id: number;
+    codigo: string;        // "AC", "PS"
+    descripcion: string;
+}
+
+export interface Turno {
+    id: number;
+    codigo: string;        // "AC0001"
+    tipoAtencion: string;
+    caja: string;
+    estado: string;        // PEN | ATE | CAN
+    fechaHoraEmision: string;
+    atendidoPor: string | null;
+}
+
+export interface MiCaja {
+    id: number;
+    nombre: string;
+    ocupadaPor: string | null;
+    esMia: boolean;
+}
+
+export interface MisCajasRespuesta {
+    miSesionCajaId: number | null;   // null = no tengo ninguna abierta
+    cajas: MiCaja[];
+}

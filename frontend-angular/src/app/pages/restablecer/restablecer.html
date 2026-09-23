@@ -1,0 +1,43 @@
+<main class="min-h-screen flex items-center justify-center bg-gray-50">
+    <div class="w-full max-w-sm bg-white p-8 rounded-lg shadow">
+
+        @if (listo()) {
+        <h1 class="text-xl font-bold mb-3 text-center">Contraseña actualizada</h1>
+        <p class="text-sm text-gray-600 text-center">Te llevamos al inicio de sesión...</p>
+        } @else {
+        <h1 class="text-2xl font-bold mb-2 text-center">Nueva contraseña</h1>
+        <p class="text-xs text-gray-500 mb-6 text-center">
+            Al menos 8 caracteres, con una mayúscula y un número.
+        </p>
+
+        @if (error()) {
+        <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm">{{ error() }}</div>
+        }
+
+        <form [formGroup]="formulario" (ngSubmit)="enviar()">
+            <label class="block text-sm font-medium mb-1">Nueva contraseña</label>
+            <input type="password" formControlName="password" autocomplete="new-password"
+                class="w-full border border-gray-300 rounded px-3 py-2 mb-4" />
+
+            <label class="block text-sm font-medium mb-1">Confirmar</label>
+            <input type="password" formControlName="confirmacion" autocomplete="new-password"
+                class="w-full border border-gray-300 rounded px-3 py-2 mb-2" />
+
+            @if (formulario.errors?.['noCoinciden'] && formulario.get('confirmacion')?.touched) {
+            <p class="text-red-600 text-sm mb-2">Las contraseñas no coinciden</p>
+            }
+            <!-- El error del GRUPO, mostrado solo cuando el usuario ya
+             tocó el segundo campo. Aparece en vivo mientras escribe. -->
+
+            <button type="submit" [disabled]="enviando() || !token"
+                class="w-full bg-blue-600 text-white rounded py-2 font-medium mt-2 disabled:bg-gray-400">
+                {{ enviando() ? 'Guardando...' : 'Cambiar contraseña' }}
+            </button>
+        </form>
+        }
+
+        <a routerLink="/login" class="block mt-4 text-center text-sm text-blue-600 underline">
+            Volver al inicio de sesión
+        </a>
+    </div>
+</main>
