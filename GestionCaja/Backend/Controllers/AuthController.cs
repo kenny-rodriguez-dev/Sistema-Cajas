@@ -18,15 +18,17 @@ public class AuthController : ControllerBase
     private readonly ServicioDeTokens _servicioDeTokens;
     private readonly IRepositorioRecuperacion _repositorioRecuperacion;
     private readonly IServicioRecuperacion _servicioRecuperacion;
+    private readonly IConfiguration _configuracion;
 
     public AuthController(AppDbContext contexto, ServicioDeTokens servicioDeTokens,
         IRepositorioRecuperacion repositorioRecuperacion,
-        IServicioRecuperacion servicioRecuperacion)
+        IServicioRecuperacion servicioRecuperacion, IConfiguration configuracion)
     {
         _contexto = contexto;
         _servicioDeTokens = servicioDeTokens;
         _repositorioRecuperacion = repositorioRecuperacion;
         _servicioRecuperacion = servicioRecuperacion;
+        _configuracion = configuracion;
     }
     // Pido DOS cosas ahora. .NET me fabrica las dos.
 
@@ -182,9 +184,13 @@ public class AuthController : ControllerBase
         // respuesta: "el flujo está completo, falta conectar un
         // proveedor de correo, y es una línea".
 
+        var urlFrontend = _configuracion["FrontendUrl"] ?? "http://localhost:3000";
+        // La misma clave que ya usa CORS. Una sola fuente para
+        // "dónde vive el frontend", en vez de dos que se desincronizan.
+
         Console.WriteLine("════════════════════════════════════════════");
         Console.WriteLine($"  RECUPERACIÓN para {usuario.Username} ({usuario.Correo})");
-        Console.WriteLine($"  Enlace: http://localhost:3000/restablecer?token={tokenPlano}");
+        Console.WriteLine($"  Enlace: {urlFrontend}/restablecer?token={tokenPlano}");
         Console.WriteLine($"  Expira: {DateTime.UtcNow.AddMinutes(15):HH:mm:ss} UTC");
         Console.WriteLine("════════════════════════════════════════════");
 
