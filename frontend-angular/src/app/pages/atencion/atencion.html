@@ -1,0 +1,248 @@
+<main class="p-8 max-w-6xl">
+    <h1 class="text-2xl font-bold mb-6">Atención al cliente</h1>
+
+    @if (mensaje()) {
+    <div class="mb-4 p-3 rounded bg-green-100 text-green-800">{{ mensaje() }}</div>
+    }
+    @if (error()) {
+    <div class="mb-4 p-3 rounded bg-red-100 text-red-800">{{ error() }}</div>
+    }
+
+    @if (!cajaAbierta()) {
+    <div class="mb-4 p-3 rounded bg-amber-50 border border-amber-200 text-sm text-amber-900">
+        No tienes una caja abierta. Puedes consultar y gestionar contratos, pero para
+        <strong>cobrar</strong> debes abrir una en
+        <a routerLink="/caja" class="underline font-medium">Procesos de caja</a>.
+    </div>
+    }
+
+    <!-- ═══ 1. BUSCAR ═══ -->
+    <div class="bg-white border rounded-lg p-5 mb-6">
+        <label class="block text-sm font-medium mb-2">Identificación del cliente</label>
+        <div class="flex gap-2">
+            <input [value]="cedula()" (input)="cedula.set(texto($event))" (keydown.enter)="buscar()" inputmode="numeric"
+                placeholder="0912345678" class="flex-1 border rounded px-3 py-2" />
+            <!-- [value] muestra el signal; (input) lo actualiza.
+           Es el enlace de doble vía hecho a mano, sin FormsModule. -->
+            <button (click)="buscar()" class="bg-blue-600 text-white rounded px-6 py-2 font-medium">Buscar</button>
+        </div>
+
+        @if (noExiste()) {
+        <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded text-sm">
+            No hay ningún cliente con esa identificación.
+            <a routerLink="/clientes/nuevo" class="text-blue-600 underline font-medium">Registrarlo como nuevo</a>
+        </div>
+        }
+    </div>
+
+    @if (cliente(); as c) {
+    <!-- ═══ 2. EL CLIENTE ═══ -->
+    <div class="bg-white border rounded-lg p-5 mb-6">
+        <p class="text-lg font-semibold">{{ c.nombres }} {{ c.apellidos }}</p>
+        <p class="text-sm text-gray-500">
+            <span class="font-mono">{{ c.identificacion }}</span> · {{ c.correo }} · {{ c.telefono }}
+        </p>
+        @if (!c.activo) {
+        <p class="mt-3 p-3 rounded bg-red-50 text-red-800 text-sm">
+            Este cliente está inactivo. Reactívalo en
+            <a routerLink="/clientes" class="underline font-medium">Clientes</a> para poder atenderlo.
+        </p>
+        }
+    </div>
+
+    @if (c.activo) {
+    @if (contratoActivo(); as ca) {
+    <!-- ═══ 3A. TIENE CONTRATO ACTIVO ═══ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+
+        <div class="bg-white border rounded-lg p-5">
+            <div class="flex justify-between items-start mb-3">
+                <h2 class="font-semibold">Contrato actual</h2>
+                <span class="px-2 py-1 rounded text-xs {{ claseEstado(ca.estado) }}">{{ textoEstado(ca.estado) }}</span>
+            </div>
+            <p class="text-2xl font-bold">{{ ca.servicio }}</p>
+            <p class="text-gray-600">{{ ca.velocidadMbps }} Mbps · {{ ca.precio | currency: 'USD' }} al mes</p>
+            <p class="text-sm text-gray-500 mt-2">
+                Forma de pago: {{ ca.formaPago }}<br />
+                Vigencia: {{ ca.fechaInicio | date: 'dd/MM/yyyy' }} al {{ ca.fechaFin | date: 'dd/MM/yyyy' }}
+            </p>
+            <button (click)="cancelar()" [disabled]="ocupado()"
+                class="mt-4 text-sm text-red-600 hover:underline disabled:text-gray-400">
+                Cancelar contrato
+            </button>
+        </div>
+
+        <!-- ─── COBRAR ─── -->
+        <div class="bg-white border rounded-lg p-5">
+            <h2 class="font-semibold mb-3">Registrar pago</h2>
+            <label class="block text-xs text-gray-500 mb-1">Mes a pagar</label>
+            <input type="month" [value]="periodo()" (input)="periodo.set(texto($event))"
+                class="w-full border rounded px-3 py-2 mb-3" />
+
+            <p class="text-sm text-gray-600 mb-3">
+                Monto: <strong>{{ ca.precio | currency: 'USD' }}</strong>
+                <span class="text-xs text-gray-400">(lo calcula el sistema)</span>
+            </p>
+
+            @if (periodoYaPagado()) {
+            <p class="text-sm text-amber-700 mb-3">Ese mes ya está pagado.</p>
+            }
+            <!-- Cambia el mes en el selector y este aviso reacciona solo.
+                 Es el computed que depende del signal "periodo". -->
+
+            <button (click)="pagar()" [disabled]="ocupado() || !cajaAbierta() || periodoYaPagado()" class="w-full bg-green-600 text-white rounded py-2 font-medium
+                           disabled:bg-gray-400 disabled:cursor-not-allowed">
+                {{ cajaAbierta() ? 'Cobrar' : 'Abre tu caja para cobrar' }}
+            </button>
+        </div>
+
+        <!-- ─── CAMBIAR SERVICIO ─── -->
+        <div class="bg-white border rounded-lg p-5">
+            <h2 class="font-semibold mb-1">Cambiar de plan</h2>
+            <p class="text-xs text-gray-500 mb-3">Se crea un contrato nuevo. La fecha de fin se conserva.</p>
+            <div class="flex gap-2">
+                <select (change)="cambioServicio.set(numero($event))" class="flex-1 border rounded px-3 py-2 text-sm">
+                    <option value="0">Elige el nuevo plan...</option>
+                    @for (s of servicios(); track s.id) {
+                    <option [value]="s.id" [disabled]="s.nombre === ca.servicio">
+                        {{ s.nombre }} · {{ s.velocidadMbps }} Mbps · {{ s.precio | currency: 'USD' }}
+                        {{ s.nombre === ca.servicio ? '(actual)' : '' }}
+                    </option>
+                    }
+                </select>
+                <button (click)="cambiarServicio()" [disabled]="ocupado()"
+                    class="bg-blue-600 text-white rounded px-4 py-2 text-sm disabled:bg-gray-400">Cambiar</button>
+            </div>
+        </div>
+
+        <!-- ─── CAMBIAR FORMA DE PAGO ─── -->
+        <div class="bg-white border rounded-lg p-5">
+            <h2 class="font-semibold mb-1">Cambiar forma de pago</h2>
+            <p class="text-xs text-gray-500 mb-3">Se actualiza el mismo contrato: no cambia su valor.</p>
+            <div class="flex gap-2">
+                <select (change)="cambioForma.set(numero($event))" class="flex-1 border rounded px-3 py-2 text-sm">
+                    <option value="0">Elige la nueva forma...</option>
+                    @for (f of formasPago(); track f.id) {
+                    <option [value]="f.id" [disabled]="f.descripcion === ca.formaPago">
+                        {{ f.descripcion }} {{ f.descripcion === ca.formaPago ? '(actual)' : '' }}
+                    </option>
+                    }
+                </select>
+                <button (click)="cambiarForma()" [disabled]="ocupado()"
+                    class="bg-blue-600 text-white rounded px-4 py-2 text-sm disabled:bg-gray-400">Cambiar</button>
+            </div>
+        </div>
+    </div>
+    } @else {
+    <!-- ═══ 3B. SIN CONTRATO ACTIVO: contratar ═══ -->
+    <div class="bg-white border rounded-lg p-5 mb-6">
+        <h2 class="font-semibold mb-4">Contratar un servicio</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Servicio</label>
+                <select (change)="nuevoServicio.set(numero($event))" class="w-full border rounded px-3 py-2 text-sm">
+                    <option value="0">Elige...</option>
+                    @for (s of servicios(); track s.id) {
+                    <option [value]="s.id">{{ s.nombre }} · {{ s.velocidadMbps }} Mbps · {{ s.precio | currency: 'USD'
+                        }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Forma de pago</label>
+                <select (change)="nuevaForma.set(numero($event))" class="w-full border rounded px-3 py-2 text-sm">
+                    <option value="0">Elige...</option>
+                    @for (f of formasPago(); track f.id) {
+                    <option [value]="f.id">{{ f.descripcion }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Duración (meses)</label>
+                <input type="number" min="1" max="36" [value]="meses()" (input)="meses.set(numero($event))"
+                    class="w-full border rounded px-3 py-2 text-sm" />
+            </div>
+        </div>
+
+        @if (servicioElegido(); as s) {
+        <p class="text-sm text-gray-600 mt-3">{{ s.descripcion }}. Incluye: {{ s.equipos.join(', ') }}.</p>
+        }
+        <!-- Otro computed: se actualiza al elegir servicio y muestra
+               los equipos que pide el enunciado. -->
+
+        <button (click)="contratar()" [disabled]="ocupado()"
+            class="mt-4 bg-blue-600 text-white rounded px-6 py-2 font-medium disabled:bg-gray-400">
+            {{ ocupado() ? 'Procesando...' : 'Contratar' }}
+        </button>
+    </div>
+    }
+    }
+
+    <!-- ═══ 4. HISTORIAL DE CONTRATOS ═══ -->
+    <h2 class="text-lg font-semibold mb-3">Historial de contratos</h2>
+    <table class="w-full bg-white border rounded-lg overflow-hidden text-sm mb-6">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="text-left px-4 py-2">#</th>
+                <th class="text-left px-4 py-2">Servicio</th>
+                <th class="text-left px-4 py-2">Precio</th>
+                <th class="text-left px-4 py-2">Vigencia</th>
+                <th class="text-left px-4 py-2">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (ct of contratos(); track ct.id) {
+            <tr class="border-t">
+                <td class="px-4 py-2 font-mono">
+                    {{ ct.id }}
+                    @if (ct.contratoAnteriorId) {
+                    <span class="text-xs text-gray-400">← {{ ct.contratoAnteriorId }}</span>
+                    }
+                </td>
+                <td class="px-4 py-2">{{ ct.servicio }} ({{ ct.velocidadMbps }} Mbps)</td>
+                <td class="px-4 py-2">{{ ct.precio | currency: 'USD' }}</td>
+                <td class="px-4 py-2">{{ ct.fechaInicio | date: 'dd/MM/yyyy' }} al {{ ct.fechaFin | date: 'dd/MM/yyyy'
+                    }}</td>
+                <td class="px-4 py-2">
+                    <span class="px-2 py-1 rounded text-xs {{ claseEstado(ct.estado) }}">{{ textoEstado(ct.estado)
+                        }}</span>
+                </td>
+            </tr>
+            } @empty {
+            <tr>
+                <td colspan="5" class="px-4 py-6 text-center text-gray-400">Sin contratos</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+
+    <!-- ═══ 5. HISTORIAL DE PAGOS ═══ -->
+    <h2 class="text-lg font-semibold mb-3">Historial de pagos</h2>
+    <table class="w-full bg-white border rounded-lg overflow-hidden text-sm">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="text-left px-4 py-2">Mes</th>
+                <th class="text-left px-4 py-2">Servicio</th>
+                <th class="text-left px-4 py-2">Monto</th>
+                <th class="text-left px-4 py-2">Forma de pago</th>
+                <th class="text-left px-4 py-2">Cobrado por</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (p of pagos(); track p.id) {
+            <tr class="border-t">
+                <td class="px-4 py-2 font-mono">{{ p.periodo }}</td>
+                <td class="px-4 py-2">{{ p.servicio }}</td>
+                <td class="px-4 py-2">{{ p.monto | currency: 'USD' }}</td>
+                <td class="px-4 py-2">{{ p.formaPago }}</td>
+                <td class="px-4 py-2 text-gray-600">{{ p.registradoPor }}</td>
+            </tr>
+            } @empty {
+            <tr>
+                <td colspan="5" class="px-4 py-6 text-center text-gray-400">Sin pagos</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+    }
+</main>

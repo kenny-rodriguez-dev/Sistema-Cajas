@@ -160,3 +160,43 @@ export type ActualizarClienteDto = Omit<CrearClienteDto, 'identificacion'>;
 // "Todo lo de CrearClienteDto menos la identificación".
 // Es un "type" y no una "interface" porque Omit produce un tipo
 // calculado, y las interfaces no pueden declararse así.
+
+// ─── ATENCIÓN AL CLIENTE ───
+// Todos con sufijo Dto: la lección de "Bienvenida". Así ningún nombre
+// choca con un componente, ni hoy ni cuando crees uno nuevo.
+
+export interface ServicioDto {
+    id: number;
+    nombre: string;
+    descripcion: string;
+    velocidadMbps: number;
+    precio: number;
+    equipos: string[];
+}
+
+export interface FormaPagoDto {
+    id: number;
+    descripcion: string;
+}
+
+export interface ContratoDto {
+    id: number;
+    servicio: string;
+    velocidadMbps: number;
+    precio: number;
+    formaPago: string;
+    estado: string;
+    fechaInicio: string;
+    fechaFin: string;
+    contratoAnteriorId: number | null;
+}
+
+export interface PagoDto {
+    id: number;
+    periodo: string;
+    monto: number;
+    formaPago: string;
+    servicio: string;
+    fechaPago: string;
+    registradoPor: string;
+}

@@ -83,6 +83,11 @@ export const routes: Routes = [
                 loadComponent: () =>
                     import('./pages/en-construccion/en-construccion').then((m) => m.EnConstruccion),
             },
+            {
+                path: 'atencion',
+                canActivate: [rolGuard(['Cajero'])],
+                loadComponent: () => import('./pages/atencion/atencion').then((m) => m.Atencion),
+            },
         ],
     },
 
