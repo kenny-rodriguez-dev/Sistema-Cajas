@@ -110,4 +110,18 @@ export class Turnos {
       },
     });
   }
+
+  cancelar(t: Turno): void {
+    if (!window.confirm(`¿Cancelar el turno ${t.codigo}?`)) return;
+    this.error.set(null);
+
+    this.servicio.cancelarTurno(t.id).subscribe({
+      next: () => this.recargarTurnos(),
+      error: (e: HttpErrorResponse) =>
+        this.error.set(
+          e.status === 403 ? 'Solo un gestor puede cancelar turnos'
+            : (e.error?.mensaje ?? 'No se pudo cancelar')
+        ),
+    });
+  }
 }

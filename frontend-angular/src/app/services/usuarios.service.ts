@@ -1,10 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { CrearUsuarioDto, ResultadoCarga, UsuarioLista } from '../models/modelos';
+import {
+    ActualizarUsuarioDto, CrearUsuarioDto, ResultadoCarga, UsuarioLista,
+} from '../models/modelos';
 
 type Mensaje = { mensaje: string };
-// Un alias de tipo: evita repetir { mensaje: string } cinco veces.
 
 @Injectable({ providedIn: 'root' })
 export class UsuariosService {
@@ -17,17 +18,22 @@ export class UsuariosService {
 
     crear(dto: CrearUsuarioDto) {
         return this.http.post<Mensaje & { id: number }>(this.url, dto);
-        // "Mensaje & { id: number }" = un objeto que tiene las dos cosas.
-        // El & combina tipos.
+    }
+
+    actualizar(id: number, dto: ActualizarUsuarioDto) {
+        return this.http.put<Mensaje>(`${this.url}/${id}`, dto);
     }
 
     aprobar(id: number) {
         return this.http.post<Mensaje>(`${this.url}/${id}/aprobar`, {});
-        // POST sin datos: mando un objeto vacío como cuerpo.
     }
 
     cambiarEstado(id: number) {
         return this.http.post<Mensaje>(`${this.url}/${id}/estado`, {});
+    }
+
+    desbloquear(id: number) {
+        return this.http.post<Mensaje>(`${this.url}/${id}/desbloquear`, {});
     }
 
     cargaMasiva(archivo: File) {

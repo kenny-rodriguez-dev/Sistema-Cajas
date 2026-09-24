@@ -1,4 +1,4 @@
-<main class="p-8 max-w-5xl">
+<main class="p-8 max-w-6xl">
     <h1 class="text-2xl font-bold mb-6">Usuarios</h1>
 
     @if (mensaje()) {
@@ -9,27 +9,65 @@
     }
 
     @if (pendientes().length > 0) {
-    <div class="mb-6 p-4 rounded bg-amber-50 border border-amber-200 text-sm text-amber-900">
+    <div class="mb-3 p-4 rounded bg-amber-50 border border-amber-200 text-sm text-amber-900">
         <strong>{{ pendientes().length }} usuario(s) pendiente(s) de aprobación.</strong>
-        @if (soyAdmin()) {
-        Apruébalos desde la tabla para que puedan entrar.
-        } @else {
-        Un administrador debe aprobarlos antes de que puedan entrar.
-        }
+        @if (soyAdmin()) { Apruébalos desde la tabla. } @else { Un administrador debe aprobarlos. }
     </div>
     }
-    <!-- pendientes() es el computed. Cuando apruebas a alguien y la
-       lista se recarga, este aviso se actualiza SOLO, sin que ningún
-       método lo toque. -->
+
+    @if (soyAdmin() && bloqueados().length > 0) {
+    <div class="mb-6 p-4 rounded bg-red-50 border border-red-200 text-sm text-red-900">
+        <strong>{{ bloqueados().length }} usuario(s) bloqueado(s)</strong> por intentos fallidos.
+        Se desbloquean solos al vencer el plazo, o puedes hacerlo desde la tabla.
+    </div>
+    }
+
+    <!-- ─── EDICIÓN ─── -->
+    @if (editando(); as u) {
+    <div class="bg-white border-2 border-blue-200 rounded-lg p-5 mb-6">
+        <h2 class="font-semibold mb-1">Editar usuario</h2>
+        <p class="text-sm text-gray-500 mb-4">
+            Usuario: <span class="font-mono">{{ u.username }}</span> (no se puede modificar)
+        </p>
+
+        <form [formGroup]="edicion" (ngSubmit)="guardarEdicion()">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Correo</label>
+                    <input formControlName="correo" class="w-full border rounded px-3 py-2 text-sm"
+                        [class.border-red-500]="mensajeEdicion('correo')" />
+                    @if (mensajeEdicion('correo'); as m) {
+                    <p class="text-red-600 text-xs mt-1">{{ m }}</p>
+                    }
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Rol</label>
+                    <select formControlName="rolId" class="w-full border rounded px-3 py-2 text-sm">
+                        <option [ngValue]="3">Cajero</option>
+                        <option [ngValue]="2">Gestor</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mt-4">
+                <button type="submit" [disabled]="ocupado()"
+                    class="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium disabled:bg-gray-400">
+                    {{ ocupado() ? 'Guardando...' : 'Guardar cambios' }}
+                </button>
+                <button type="button" (click)="cancelarEdicion()" class="border rounded px-5 py-2 text-sm">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+    }
 
     <!-- ─── CREAR ─── -->
     <div class="bg-white border rounded-lg p-5 mb-6">
         <h2 class="font-semibold mb-4">Crear usuario</h2>
-
         @if (!soyAdmin()) {
         <p class="text-sm text-amber-700 mb-4">
-            Como gestor puedes crear usuarios, pero un administrador deberá
-            aprobarlos antes de que puedan iniciar sesión.
+            Como gestor puedes crear usuarios, pero un administrador deberá aprobarlos.
         </p>
         }
 
@@ -40,42 +78,26 @@
                     <input formControlName="username" placeholder="ejemplo: cajero0004"
                         class="w-full border rounded px-3 py-2 text-sm"
                         [class.border-red-500]="mensajeDe('username')" />
-                    @if (mensajeDe('username'); as m) {
-                    <p class="text-red-600 text-xs mt-1">{{ m }}</p>
-                    }
+                    @if (mensajeDe('username'); as m) { <p class="text-red-600 text-xs mt-1">{{ m }}</p> }
                 </div>
-
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Contraseña</label>
                     <input type="password" formControlName="password" class="w-full border rounded px-3 py-2 text-sm"
                         [class.border-red-500]="mensajeDe('password')" />
-                    @if (mensajeDe('password'); as m) {
-                    <p class="text-red-600 text-xs mt-1">{{ m }}</p>
-                    }
+                    @if (mensajeDe('password'); as m) { <p class="text-red-600 text-xs mt-1">{{ m }}</p> }
                 </div>
-
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Correo</label>
                     <input formControlName="correo" class="w-full border rounded px-3 py-2 text-sm"
                         [class.border-red-500]="mensajeDe('correo')" />
-                    @if (mensajeDe('correo'); as m) {
-                    <p class="text-red-600 text-xs mt-1">{{ m }}</p>
-                    }
+                    @if (mensajeDe('correo'); as m) { <p class="text-red-600 text-xs mt-1">{{ m }}</p> }
                 </div>
-
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Rol</label>
                     <select formControlName="rolId" class="w-full border rounded px-3 py-2 text-sm">
                         <option [ngValue]="3">Cajero</option>
                         <option [ngValue]="2">Gestor</option>
                     </select>
-                    <!-- ═══ [ngValue] Y NO value ═══
-               Con value="3", el formulario recibiría el TEXTO "3".
-               [ngValue]="3" entrega el NÚMERO 3.
-               Es el mismo problema que en React resolviste con
-               Number(e.target.value). Aquí se resuelve en la plantilla.
-               Y no hay opción de Administrador: el backend además
-               lo bloquea con [Range(2, 3)]. -->
                 </div>
             </div>
 
@@ -86,7 +108,7 @@
         </form>
     </div>
 
-    <!-- ─── CARGA MASIVA (solo admin) ─── -->
+    <!-- ─── CARGA MASIVA ─── -->
     @if (soyAdmin()) {
     <div class="bg-white border rounded-lg p-5 mb-6">
         <h2 class="font-semibold mb-2">Carga masiva</h2>
@@ -158,19 +180,29 @@
                         @if (!u.aprobado) {
                         <span class="px-2 py-1 rounded text-xs bg-amber-100 text-amber-800">Sin aprobar</span>
                         }
+                        @if (u.bloqueadoHasta) {
+                        <span class="px-2 py-1 rounded text-xs bg-red-100 text-red-800">
+                            Bloqueado hasta {{ u.bloqueadoHasta | date: 'HH:mm' }}
+                        </span>
+                        }
+                        <!-- El pipe date convierte la hora UTC a tu hora local
+                     solo, gracias a la "Z" del backend. -->
                     </div>
                 </td>
                 <td class="px-4 py-2 text-gray-500">{{ u.creadoPor ?? '—' }}</td>
                 @if (soyAdmin()) {
                 <td class="px-4 py-2">
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 flex-wrap">
                         @if (!u.aprobado) {
                         <button (click)="aprobar(u.id)" [disabled]="ocupado()"
-                            class="text-xs bg-green-600 text-white rounded px-3 py-1 disabled:bg-gray-400">
-                            Aprobar
-                        </button>
+                            class="text-xs bg-green-600 text-white rounded px-3 py-1 disabled:bg-gray-400">Aprobar</button>
+                        }
+                        @if (u.bloqueadoHasta) {
+                        <button (click)="desbloquear(u.id)" [disabled]="ocupado()"
+                            class="text-xs bg-red-600 text-white rounded px-3 py-1 disabled:bg-gray-400">Desbloquear</button>
                         }
                         @if (u.rolId !== 1) {
+                        <button (click)="empezarEdicion(u)" class="text-xs border rounded px-3 py-1">Editar</button>
                         <button (click)="cambiarEstado(u.id)" [disabled]="ocupado()"
                             class="text-xs border rounded px-3 py-1 disabled:text-gray-400">
                             {{ u.activo ? 'Desactivar' : 'Activar' }}

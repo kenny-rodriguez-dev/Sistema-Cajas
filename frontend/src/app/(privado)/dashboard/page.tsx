@@ -11,6 +11,7 @@ type IndicadoresUsuarios = {
     conSesionAbierta: number;
     gestores: number;
     cajeros: number;
+    bloqueados: number;
 };
 
 type IndicadorCaja = {
@@ -177,6 +178,7 @@ export default function DashboardPage() {
                         <Indicador etiqueta="Activos" valor={datos.usuarios.activos} color="text-green-600" />
                         <Indicador etiqueta="Inactivos" valor={datos.usuarios.inactivos} color="text-gray-400" />
                         <Indicador etiqueta="Sin aprobar" valor={datos.usuarios.pendientesAprobacion} color="text-amber-600" />
+                        <Indicador etiqueta="Bloqueados" valor={datos.usuarios.bloqueados} color="text-red-600" />
                         <Indicador etiqueta="Gestores" valor={datos.usuarios.gestores} />
                         <Indicador etiqueta="Cajeros" valor={datos.usuarios.cajeros} />
                         <Indicador etiqueta="Sesión abierta" valor={datos.usuarios.conSesionAbierta} color="text-blue-600" />

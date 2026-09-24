@@ -68,6 +68,7 @@ export interface UsuarioLista {
     aprobado: boolean;
     fechaCreacion: string;
     creadoPor: string | null;
+    bloqueadoHasta: string | null;
 }
 
 export interface CrearUsuarioDto {
@@ -86,6 +87,7 @@ export interface IndicadoresUsuarios {
     conSesionAbierta: number;
     gestores: number;
     cajeros: number;
+    bloqueados: number;
 }
 
 export interface IndicadorCaja {
@@ -199,4 +201,10 @@ export interface PagoDto {
     servicio: string;
     fechaPago: string;
     registradoPor: string;
+}
+
+export interface ActualizarUsuarioDto {
+    correo: string;
+    rolId: number;
+    activo: boolean;
 }

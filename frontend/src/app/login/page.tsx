@@ -45,7 +45,9 @@ export default function LoginPage() {
             // Tiene sentido: todavía no tengo token. Es la única petición
             // del sistema que no lo necesita.
 
-            if (respuesta.status === 401) {
+            if (respuesta.status === 401 || respuesta.status === 423) {
+                // 423 = cuenta bloqueada. Trae su propio mensaje con los
+                // minutos que faltan, así que se muestra igual que el 401.
                 const problema = await respuesta.json();
                 setError(problema.mensaje);
                 return;

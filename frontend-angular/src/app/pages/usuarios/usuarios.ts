@@ -1,5 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { DatePipe } from '@angular/common';
+import {
+  AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators,
+} from '@angular/forms';
+// Dos importaciones nuevas: AbstractControl y FormGroup.
+// Son los tipos "generales" que comparten todos los controles y
+// todos los formularios.
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { UsuariosService } from '../../services/usuarios.service';
@@ -8,7 +14,7 @@ import { ErrorFila, UsuarioLista } from '../../models/modelos';
 
 @Component({
   selector: 'app-usuarios',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, DatePipe],
   templateUrl: './usuarios.html',
 })
 export class Usuarios {
@@ -23,51 +29,28 @@ export class Usuarios {
   ocupado = signal(false);
   archivo = signal<File | null>(null);
   erroresCarga = signal<ErrorFila[] | null>(null);
-
-  // ═══════════════════════════════════════════════════════════
-  //   computed(): ESTADO DERIVADO
-  // ═══════════════════════════════════════════════════════════
+  editando = signal<UsuarioLista | null>(null);
 
   pendientes = computed(() => this.usuarios().filter((u) => !u.aprobado));
-  // Un signal que se CALCULA a partir de otro.
-  //
-  // Angular detecta solo que depende de usuarios(), y lo recalcula
-  // cada vez que usuarios cambia. Nunca tienes que acordarte de
-  // actualizarlo a mano.
-  //
-  // En React, esto lo calculaste dentro del render en cada repintado,
-  // o tendrías que haber usado useMemo con su lista de dependencias
-  // escrita a mano. Aquí las dependencias se detectan solas.
-  //
-  // Y se lee igual que cualquier signal: this.pendientes()
-
+  bloqueados = computed(() => this.usuarios().filter((u) => u.bloqueadoHasta !== null));
   soyAdmin = computed(() => this.sesion.sesion()?.rol === 'Administrador');
-  // Solo decide QUÉ BOTONES DIBUJAR. La seguridad real es el
-  // [Authorize(Roles = "Administrador")] de cada endpoint.
 
   formulario = this.fb.nonNullable.group({
     username: ['', [
-      Validators.required,
-      Validators.minLength(8),
-      Validators.maxLength(20),
+      Validators.required, Validators.minLength(8), Validators.maxLength(20),
       Validators.pattern(/^(?=.*[0-9])(?=.*[a-zA-Z])[a-zA-Z0-9]+$/),
     ]],
-    // Las cuatro reglas del enunciado para el nombre de usuario:
-    // 8 a 20 caracteres, letras Y números, sin caracteres especiales.
-    // La misma expresión que en tu CrearUsuarioDto de C#.
-
     password: ['', [
-      Validators.required,
-      Validators.minLength(8),
-      Validators.maxLength(30),
+      Validators.required, Validators.minLength(8), Validators.maxLength(30),
       Validators.pattern(/^(?=.*[0-9])(?=.*[A-Z]).+$/),
     ]],
-
     correo: ['', [Validators.required, Validators.email, Validators.maxLength(120)]],
-
     rolId: [3, [Validators.required, Validators.min(2), Validators.max(3)]],
-    // Arranca en 3 (Cajero). min y max impiden cualquier otro valor,
-    // igual que el [Range(2, 3)] del DTO.
+  });
+
+  edicion = this.fb.nonNullable.group({
+    correo: ['', [Validators.required, Validators.email, Validators.maxLength(120)]],
+    rolId: [3, [Validators.required, Validators.min(2), Validators.max(3)]],
   });
 
   private mensajesPatron: Record<string, string> = {
@@ -97,8 +80,12 @@ export class Usuarios {
     this.erroresCarga.set(null);
   }
 
-  mensajeDe(campo: string): string | null {
-    const control = this.formulario.get(campo);
+  private textoError(control: AbstractControl | null, campo: string): string | null {
+    // ═══ AbstractControl: EL TIPO QUE COMPARTEN TODOS LOS CONTROLES ═══
+    // Un campo de cualquier formulario ES un AbstractControl.
+    // Pidiendo este tipo general, la función sirve para el formulario
+    // de crear y para el de editar, sin que TypeScript tenga que
+    // adivinar de cuál viene.
     if (!control || !control.touched || !control.errors) return null;
     const e = control.errors;
     if (e['servidor']) return e['servidor'];
@@ -111,92 +98,123 @@ export class Usuarios {
     return null;
   }
 
+  mensajeDe(campo: string): string | null {
+    return this.textoError(this.formulario.get(campo), campo);
+  }
+
+  mensajeEdicion(campo: string): string | null {
+    return this.textoError(this.edicion.get(campo), campo);
+  }
+
+  private pegarErrores(grupo: FormGroup, errores: Record<string, string[]>): void {
+    // ═══ ANTES: grupo: typeof this.formulario | typeof this.edicion ═══
+    // Eso le decía a TypeScript "puede ser uno u otro formulario", y
+    // como cada uno tiene su propio .get() con sus propios nombres de
+    // campo, no podía decidir cuál usar.
+    //
+    // AHORA: grupo: FormGroup, el tipo general de cualquier formulario.
+    // Su .get() acepta cualquier nombre. Los dos formularios entran
+    // aquí sin problema, porque los dos SON un FormGroup.
+    for (const [clave, mensajes] of Object.entries(errores)) {
+      const control = grupo.get(clave.charAt(0).toLowerCase() + clave.slice(1));
+      if (control) {
+        control.setErrors({ servidor: mensajes[0] });
+        control.markAsTouched();
+      }
+    }
+  }
+
   crear(): void {
     this.limpiar();
-
     if (this.formulario.invalid) {
       this.formulario.markAllAsTouched();
       this.mensajeError.set('Revisa los campos marcados');
       return;
     }
-
     this.ocupado.set(true);
 
     this.servicio.crear(this.formulario.getRawValue()).subscribe({
       next: (r) => {
         this.mensaje.set(r.mensaje);
-        // El mensaje cambia según quién creó: si fue el gestor, dice
-        // que debe ser aprobado. Esa diferencia la decide el backend.
-
         this.formulario.reset({ username: '', password: '', correo: '', rolId: 3 });
-        // reset() con valores: vuelve a dejar Cajero seleccionado.
-        // Sin ese objeto, rolId quedaría en su valor inicial igual,
-        // pero así queda explícito y a prueba de cambios.
-
         this.ocupado.set(false);
         this.cargar();
       },
       error: (e: HttpErrorResponse) => {
         this.ocupado.set(false);
-
         if (e.status === 400 && e.error?.errors) {
-          for (const [clave, mensajes] of Object.entries(e.error.errors as Record<string, string[]>)) {
-            const campo = clave.charAt(0).toLowerCase() + clave.slice(1);
-            const control = this.formulario.get(campo);
-            if (control) {
-              control.setErrors({ servidor: mensajes[0] });
-              control.markAsTouched();
-            }
-          }
+          this.pegarErrores(this.formulario, e.error.errors);
           this.mensajeError.set('El servidor rechazó algunos campos');
           return;
         }
-
         this.mensajeError.set(
           e.status === 403 ? 'No tienes permiso para crear usuarios' : (e.error?.mensaje ?? 'No se pudo crear')
         );
-        // 409 (usuario repetido) cae aquí con su propio mensaje.
+      },
+    });
+  }
+
+  empezarEdicion(u: UsuarioLista): void {
+    this.limpiar();
+    this.editando.set(u);
+    this.edicion.reset({ correo: u.correo, rolId: u.rolId });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  cancelarEdicion(): void {
+    this.editando.set(null);
+  }
+
+  guardarEdicion(): void {
+    const u = this.editando();
+    if (!u) return;
+    this.limpiar();
+
+    if (this.edicion.invalid) {
+      this.edicion.markAllAsTouched();
+      this.mensajeError.set('Revisa los campos marcados');
+      return;
+    }
+    this.ocupado.set(true);
+
+    this.servicio.actualizar(u.id, { ...this.edicion.getRawValue(), activo: u.activo }).subscribe({
+      next: (r) => {
+        this.mensaje.set(r.mensaje);
+        this.editando.set(null);
+        this.ocupado.set(false);
+        this.cargar();
+      },
+      error: (e: HttpErrorResponse) => {
+        this.ocupado.set(false);
+        if (e.status === 400 && e.error?.errors) {
+          this.pegarErrores(this.edicion, e.error.errors);
+          this.mensajeError.set('El servidor rechazó algunos campos');
+          return;
+        }
+        this.mensajeError.set(
+          e.status === 403 ? 'Solo un administrador puede editar usuarios' : (e.error?.mensaje ?? 'No se pudo guardar')
+        );
       },
     });
   }
 
   private ejecutar(accion: Observable<{ mensaje: string }>): void {
-    // ═══ UN MÉTODO PARA APROBAR Y CAMBIAR ESTADO ═══
-    // Los dos son un POST sin datos que después recarga la tabla.
-    // Recibe el Observable ya armado y se encarga del resto.
-    //
-    // Fíjate en el tipo: Observable<{ mensaje: string }>. Le paso
-    // la petición SIN ejecutar. Recién aquí adentro, con el
-    // .subscribe(), sale de verdad.
     this.limpiar();
     this.ocupado.set(true);
-
     accion.subscribe({
-      next: (r) => {
-        this.mensaje.set(r.mensaje);
-        this.ocupado.set(false);
-        this.cargar();
-      },
+      next: (r) => { this.mensaje.set(r.mensaje); this.ocupado.set(false); this.cargar(); },
       error: (e: HttpErrorResponse) => {
         this.ocupado.set(false);
         this.mensajeError.set(
           e.status === 403 ? 'No tienes permiso para esta acción' : (e.error?.mensaje ?? 'No se pudo completar')
         );
-        // Aquí llegan las salvaguardas del backend: "no puedes
-        // desactivarte a ti mismo", "no puedes desactivar al único
-        // administrador". Las reglas viven en el servidor; la pantalla
-        // solo muestra lo que el servidor dice.
       },
     });
   }
 
-  aprobar(id: number): void {
-    this.ejecutar(this.servicio.aprobar(id));
-  }
-
-  cambiarEstado(id: number): void {
-    this.ejecutar(this.servicio.cambiarEstado(id));
-  }
+  aprobar(id: number): void { this.ejecutar(this.servicio.aprobar(id)); }
+  cambiarEstado(id: number): void { this.ejecutar(this.servicio.cambiarEstado(id)); }
+  desbloquear(id: number): void { this.ejecutar(this.servicio.desbloquear(id)); }
 
   seleccionar(evento: Event): void {
     this.archivo.set((evento.target as HTMLInputElement).files?.[0] ?? null);
@@ -206,7 +224,6 @@ export class Usuarios {
   subir(): void {
     const archivo = this.archivo();
     if (!archivo) return;
-
     this.limpiar();
     this.ocupado.set(true);
 
@@ -219,10 +236,7 @@ export class Usuarios {
       },
       error: (e: HttpErrorResponse) => {
         this.ocupado.set(false);
-        if (e.status === 403) {
-          this.mensajeError.set('Solo un administrador puede importar usuarios');
-          return;
-        }
+        if (e.status === 403) { this.mensajeError.set('Solo un administrador puede importar usuarios'); return; }
         if (e.error?.errores) {
           this.erroresCarga.set(e.error.errores);
           this.mensajeError.set(e.error.mensaje);

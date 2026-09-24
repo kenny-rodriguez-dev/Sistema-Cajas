@@ -61,6 +61,7 @@
                 <th class="text-left px-4 py-2">Caja</th>
                 <th class="text-left px-4 py-2">Estado</th>
                 <th class="text-left px-4 py-2">Atendido por</th>
+                <th class="text-left px-4 py-2">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -78,10 +79,15 @@
                    [class.loQueSea] cuando el valor viene de un método. -->
                 </td>
                 <td class="px-4 py-2 text-gray-600">{{ t.atendidoPor ?? '—' }}</td>
+                <td class="px-4 py-2">
+                    @if (t.estado === 'PEN') {
+                    <button (click)="cancelar(t)" class="text-xs text-red-600 hover:underline">Cancelar</button>
+                    }
+                </td>
             </tr>
             } @empty {
             <tr>
-                <td colspan="5" class="px-4 py-6 text-center text-gray-400">
+                <td colspan="6" class="px-4 py-6 text-center text-gray-400">
                     Todavía no hay turnos hoy
                 </td>
             </tr>

@@ -70,15 +70,19 @@ export class Login {
 
             error: (e) => {
                 this.error.set(
-                    e.status === 401
-                        ? (e.error?.mensaje ?? 'Usuario o contraseña incorrectos')
-                        : 'No se pudo conectar con el servidor'
+                    e.status === 0
+                        ? 'No se pudo conectar con el servidor'
+                        : (e.error?.mensaje ?? 'No se pudo iniciar sesión')
                 );
                 this.enviando.set(false);
-                // error = falló. Aquí entran tanto los errores HTTP como
-                // los fallos de red. A diferencia de fetch, que trata un 401
-                // como "éxito" porque la respuesta llegó, Angular manda todos
-                // los códigos de error aquí. Es más cómodo.
+                // ═══ ESTO ESTABA MAL, Y ES LA MISMA LECCIÓN DE SIEMPRE ═══
+                // Antes decía: "si no es 401, es que no se pudo conectar".
+                // Un 423 de bloqueo o un 500 del servidor mostraban
+                // "no se pudo conectar", que es falso. El catch demasiado ancho
+                // que encontraste en la carga masiva de React, otra vez.
+                //
+                // Ahora: status 0 es un fallo de red de verdad. Cualquier otro
+                // código trae su propio mensaje del backend, y se muestra ese.
             },
         });
     }

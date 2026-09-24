@@ -29,6 +29,10 @@ export class TurnosService {
         return this.http.post<Mensaje>(`${this.api}/api/turnos/${turnoId}/atender`, {});
     }
 
+    cancelarTurno(turnoId: number) {
+        return this.http.post<Mensaje>(`${this.api}/api/turnos/${turnoId}/cancelar`, {});
+    }
+
     // ─── CAJAS ───
     listarCajas() {
         return this.http.get<CajaDetalle[]>(`${this.api}/api/cajas`);

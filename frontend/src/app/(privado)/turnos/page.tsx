@@ -94,6 +94,25 @@ export default function TurnosPage() {
         }
     }
 
+    async function cancelar(t: Turno) {
+        if (!window.confirm(`¿Cancelar el turno ${t.codigo}?`)) return;
+        setError(null);
+
+        try {
+            const r = await apiFetch(`/api/turnos/${t.id}/cancelar`, { method: 'POST' });
+            if (r.status === 403) { setError('Solo un gestor puede cancelar turnos'); return; }
+
+            const d = await r.json();
+            if (!r.ok) { setError(d.mensaje ?? 'No se pudo cancelar'); return; }
+
+            await cargarTurnos();
+            // No hace falta mensaje de éxito: la etiqueta del turno pasa
+            // a "Cancelado" en la tabla, y esa es la confirmación visual.
+        } catch {
+            setError('No se pudo conectar con el servidor');
+        }
+    }
+
     if (cargando) return <main className="p-8 text-gray-500">Cargando...</main>;
 
     return (
@@ -170,11 +189,12 @@ export default function TurnosPage() {
                         <th className="text-left px-4 py-2">Caja</th>
                         <th className="text-left px-4 py-2">Estado</th>
                         <th className="text-left px-4 py-2">Atendido por</th>
+                        <th className="text-left px-4 py-2">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {turnos.length === 0 && (
-                        <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                        <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400">
                             Todavía no hay turnos hoy
                         </td></tr>
                     )}
@@ -189,6 +209,13 @@ export default function TurnosPage() {
                                     <span className={`px-2 py-1 rounded text-xs ${e.clase}`}>{e.texto}</span>
                                 </td>
                                 <td className="px-4 py-2 text-gray-600">{t.atendidoPor ?? '—'}</td>
+                                <td className="px-4 py-2">
+                                    {t.estado === 'PEN' && (
+                                        <button onClick={() => cancelar(t)} className="text-xs text-red-600 hover:underline">
+                                            Cancelar
+                                        </button>
+                                    )}
+                                </td>
                             </tr>
                         );
                     })}
