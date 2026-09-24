@@ -46,7 +46,11 @@ public class UsuariosController : ControllerBase
             FechaCreacion = u.FechaCreacion,
             CreadoPor = u.CreadoPorUsuarioId.HasValue && nombres.ContainsKey(u.CreadoPorUsuarioId.Value)
                         ? nombres[u.CreadoPorUsuarioId.Value]
-                        : null
+                        : null,
+            BloqueadoHasta = u.EstaBloqueado(DateTime.UtcNow) ? u.BloqueadoHasta : null,
+            // Si el bloqueo ya venció, mando null. Así la pantalla no
+            // muestra "bloqueado hasta las 10:15" cuando ya son las 11.
+            // La fecha vencida sigue en la base, pero ya no significa nada.
         }));
     }
 
@@ -284,5 +288,26 @@ public class UsuariosController : ControllerBase
             FilasImportadas = filas.Count,
             Mensaje = $"{filas.Count} usuario(s) importado(s) correctamente"
         });
+    }
+
+    // ─── DESBLOQUEAR ───────────────────────────────────────────
+    [HttpPost("{id}/desbloquear")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Desbloquear(int id)
+    {
+        var usuario = await _repositorio.ObtenerConRolAsync(id);
+        if (usuario is null)
+            return NotFound(new { mensaje = "El usuario no existe" });
+
+        if (!usuario.EstaBloqueado(DateTime.UtcNow))
+            return Conflict(new { mensaje = "Ese usuario no está bloqueado" });
+
+        usuario.Desbloquear();
+        // La misma regla de la entidad. El controlador no sabe qué
+        // campos hay que limpiar: le pide a la entidad que se desbloquee.
+
+        await _repositorio.GuardarAsync();
+
+        return Ok(new { mensaje = $"Usuario '{usuario.Username}' desbloqueado" });
     }
 }

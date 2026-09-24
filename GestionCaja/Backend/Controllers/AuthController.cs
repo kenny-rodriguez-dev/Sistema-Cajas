@@ -1,81 +1,95 @@
-﻿using Application.Dtos;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Application.Dtos;
 using Application.Interfaces;
 using Domain.Entities;
-using Infrastructure.Data;
 using Infrastructure.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace Backend.Controllers;
+// Fíjate en los using: ya no está Infrastructure.Data ni EntityFramework.
+// Este controlador ya no sabe que existe una base de datos.
 
 [ApiController]
-[Route("api/[controller]")]   // -> /api/auth
+[Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly AppDbContext _contexto;
+    private readonly IRepositorioUsuarios _repositorioUsuarios;
     private readonly ServicioDeTokens _servicioDeTokens;
     private readonly IRepositorioRecuperacion _repositorioRecuperacion;
     private readonly IServicioRecuperacion _servicioRecuperacion;
     private readonly IConfiguration _configuracion;
 
-    public AuthController(AppDbContext contexto, ServicioDeTokens servicioDeTokens,
+    public AuthController(
+        IRepositorioUsuarios repositorioUsuarios,
+        ServicioDeTokens servicioDeTokens,
         IRepositorioRecuperacion repositorioRecuperacion,
-        IServicioRecuperacion servicioRecuperacion, IConfiguration configuracion)
+        IServicioRecuperacion servicioRecuperacion,
+        IConfiguration configuracion)
     {
-        _contexto = contexto;
+        _repositorioUsuarios = repositorioUsuarios;
         _servicioDeTokens = servicioDeTokens;
         _repositorioRecuperacion = repositorioRecuperacion;
         _servicioRecuperacion = servicioRecuperacion;
         _configuracion = configuracion;
     }
-    // Pido DOS cosas ahora. .NET me fabrica las dos.
 
-    [HttpPost("login")]   // -> POST /api/auth/login
+    // ─── LOGIN ─────────────────────────────────────────────────
+    [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto dto)
     {
-        // ═══ PASO 1: BUSCAR AL USUARIO ═══
-        var usuario = await _contexto.Usuarios
-            .Include(u => u.Rol)
-            // ESTA LÍNEA ES OBLIGATORIA.
-            //
-            // Por defecto EF NO trae las relaciones: si pido el usuario,
-            // usuario.Rol viene en null y al leer usuario.Rol.Nombre
-            // reventaría. Include le dice "traeme también el rol".
-            // En SQL eso se traduce en un JOIN.
-            .FirstOrDefaultAsync(u => u.Username == dto.Username);
+        var ahora = DateTime.UtcNow;
+        // Una sola lectura de la hora para todo el método. Si la pidiera
+        // en cada línea, dos comprobaciones podrían ver momentos distintos.
 
-        // ═══ PASO 2: VERIFICAR LA CONTRASEÑA ═══
+        var usuario = await _repositorioUsuarios.ObtenerPorUsernameAsync(dto.Username);
+
+        // ═══ PASO 1: EL BLOQUEO, ANTES QUE NADA ═══
+        if (usuario is not null && usuario.EstaBloqueado(ahora))
+        {
+            int minutos = (int)Math.Ceiling((usuario.BloqueadoHasta!.Value - ahora).TotalMinutes);
+            // Ceiling redondea hacia arriba: con 30 segundos restantes
+            // dice "1 minuto", no "0 minutos".
+
+            return StatusCode(423, new
+            {
+                mensaje = $"Cuenta bloqueada por demasiados intentos fallidos. Intenta en {minutos} minuto(s)."
+            });
+            // 423 Locked: "el recurso está bloqueado". Es el código que
+            // mejor describe esto. Otros sistemas usan 429 (demasiadas
+            // peticiones); los dos son defendibles.
+            //
+            // Y fíjate que la contraseña NO SE REVISÓ. Ni la correcta
+            // abre la cuenta mientras dure el bloqueo.
+        }
+
+        // ═══ PASO 2: LA CONTRASEÑA ═══
         bool credencialesValidas =
             usuario is not null &&
             BCrypt.Net.BCrypt.Verify(dto.Password, usuario.PasswordHash);
-        //
-        // Verify hace lo que aprendiste en la 2A: saca el salt del hash
-        // guardado, vuelve a hashear lo que el usuario escribió con ESE
-        // mismo salt, y compara. Por eso no se puede usar "==".
-        //
-        // Y fíjate en el orden: el "&&" en C# es de cortocircuito. Si el
-        // usuario es null, Verify ni se ejecuta y no revienta.
 
         if (!credencialesValidas)
+        {
+            if (usuario is not null)
+            {
+                usuario.RegistrarIntentoFallido(ahora);
+                await _repositorioUsuarios.GuardarAsync();
+                // La entidad decide si con este intento se bloquea.
+                // El controlador ni sabe cuántos intentos hacen falta.
+            }
+
             return Unauthorized(new { mensaje = "Usuario o contraseña incorrectos" });
-        //
-        // ═══ ESTE MENSAJE GENÉRICO ES A PROPÓSITO ═══
-        //
-        // Fíjate que un usuario inexistente y una contraseña equivocada
-        // dan EXACTAMENTE la misma respuesta.
-        //
-        // Si dijera "ese usuario no existe", un atacante podría probar
-        // miles de nombres y armarse una lista de cuentas reales antes de
-        // empezar a adivinar contraseñas. Eso se llama enumeración de usuarios.
-        //
-        // Es el paso 4 de la respuesta de tu sustentación.
+            // Mismo mensaje genérico de siempre, exista o no el usuario.
+        }
 
-        // ═══ PASO 3: REVISAR EL ESTADO ═══
-        // Sus credenciales son correctas, pero eso no basta.
+        // ═══ PASO 3: CONTRASEÑA CORRECTA ═══
+        usuario!.RegistrarIngresoExitoso();
+        await _repositorioUsuarios.GuardarAsync();
+        // El contador vuelve a cero, AUNQUE más abajo el login falle por
+        // estar inactivo o sin aprobar. Quien llegó aquí demostró que
+        // conoce la contraseña: no hay por qué seguir contándole fallos.
 
-        if (!usuario!.Activo)
+        if (!usuario.Activo)
             return Unauthorized(new { mensaje = "El usuario está inactivo" });
 
         if (!usuario.Aprobado)
@@ -83,13 +97,8 @@ public class AuthController : ControllerBase
             {
                 mensaje = "El usuario está pendiente de aprobación por un administrador"
             });
-        // Aquí SÍ soy específico, y no me contradigo: quien llegó hasta esta
-        // línea YA demostró que sabe la contraseña. Decirle por qué no puede
-        // entrar no le regala información a nadie más.
 
-        // ═══ PASO 4: EMITIR EL TOKEN ═══
         var (token, expira) = _servicioDeTokens.GenerarToken(usuario);
-        // Desarmo la tupla en dos variables de una sola línea.
 
         return Ok(new RespuestaLoginDto
         {
@@ -99,53 +108,24 @@ public class AuthController : ControllerBase
             Expira = expira
         });
     }
-    [HttpGet("yo")]     // -> GET /api/auth/yo
+
+    // ─── QUIÉN SOY ─────────────────────────────────────────────
+    [HttpGet("yo")]
     [Authorize]
     public IActionResult Yo()
     {
-        // Este endpoint no toca la base de datos. Lee del TOKEN.
-        //
-        // Cuando UseAuthentication validó el token, desempacó sus claims
-        // y los dejó en "User", una propiedad que ControllerBase me regala.
-        // Está disponible en cualquier controlador, siempre.
-
         var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var username = User.FindFirst(ClaimTypes.Name)?.Value;
         var rol = User.FindFirst(ClaimTypes.Role)?.Value;
-        // FindFirst busca un claim por nombre. El "?" evita que reviente
-        // si no existe: devuelve null en vez de tirar excepción.
-        //
-        // Estos son EXACTAMENTE los claims que metiste en ServicioDeTokens.
-        // Dieron la vuelta completa: los firmaste, viajaron al cliente,
-        // volvieron, .NET verificó la firma, y aquí los estás leyendo.
-
         return Ok(new { id, username, rol });
     }
 
-    // ─── PASO 1: SOLICITAR ─────────────────────────────────────
+    // ─── SOLICITAR RECUPERACIÓN ────────────────────────────────
     [HttpPost("recuperar")]
     [AllowAnonymous]
-    // Obvio pero conviene decirlo: quien olvidó su contraseña
-    // no puede tener un token para autenticarse.
     public async Task<IActionResult> SolicitarRecuperacion(SolicitarRecuperacionDto dto)
     {
         var usuario = await _repositorioRecuperacion.BuscarPorCorreoAsync(dto.Correo);
-
-        // ═══════════════════════════════════════════════════════
-        //   LA DECISIÓN MÁS IMPORTANTE DE TODO ESTE ARCHIVO
-        // ═══════════════════════════════════════════════════════
-        //
-        // Si el correo NO existe, respondo EXACTAMENTE lo mismo que si
-        // existiera. Ni un mensaje distinto, ni un código distinto.
-        //
-        // ¿Por qué? Si respondiera "ese correo no está registrado",
-        // cualquiera podría probar miles de correos y armar una lista
-        // de cuentas reales de la empresa. Eso se llama ENUMERACIÓN
-        // DE USUARIOS, y es el mismo motivo por el que tu login dice
-        // "usuario o contraseña incorrectos" sin especificar cuál falló.
-        //
-        // Es contraintuitivo: parece menos útil para el usuario honesto.
-        // Pero el usuario honesto sabe cuál es su correo; el atacante no.
 
         if (usuario is null)
         {
@@ -164,29 +144,9 @@ public class AuthController : ControllerBase
             UsuarioId = usuario.Id,
             TokenHash = tokenHash,
             FechaExpiracion = DateTime.UtcNow.AddMinutes(15)
-            // 15 minutos. Suficiente para revisar el correo, corto
-            // para que un token filtrado sirva de poco.
         });
 
-        // ═══ AQUÍ IRÍA EL ENVÍO DEL CORREO ═══
-        //
-        // En un sistema real, esta línea sería algo como:
-        //     await _servicioCorreo.EnviarAsync(usuario.Correo, enlace);
-        // con un proveedor como SendGrid, Mailgun o un SMTP propio.
-        //
-        // No lo implemento porque requiere credenciales de un servicio
-        // externo, y el enunciado no lo pide. En su lugar imprimo el
-        // enlace en la consola: el token se genera, se guarda y se
-        // valida EXACTAMENTE igual que en producción. Lo único que
-        // falta es el transporte.
-        //
-        // Si te preguntan por esto en una sustentación, esa es la
-        // respuesta: "el flujo está completo, falta conectar un
-        // proveedor de correo, y es una línea".
-
         var urlFrontend = _configuracion["FrontendUrl"] ?? "http://localhost:3000";
-        // La misma clave que ya usa CORS. Una sola fuente para
-        // "dónde vive el frontend", en vez de dos que se desincronizan.
 
         Console.WriteLine("════════════════════════════════════════════");
         Console.WriteLine($"  RECUPERACIÓN para {usuario.Username} ({usuario.Correo})");
@@ -197,20 +157,17 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             mensaje = "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña."
-            // Mensaje IDÉNTICO al del caso anterior. Sin excepciones.
         });
     }
 
-    // ─── PASO 2: RESTABLECER ───────────────────────────────────
+    // ─── RESTABLECER ───────────────────────────────────────────
     [HttpPost("restablecer")]
     [AllowAnonymous]
     public async Task<IActionResult> Restablecer(RestablecerPasswordDto dto)
     {
         var vigentes = await _repositorioRecuperacion.ObtenerTokensVigentesAsync();
-        // Ya filtrados: sin usar y sin expirar.
 
         TokenRecuperacion? tokenValido = null;
-
         foreach (var candidato in vigentes)
         {
             if (_servicioRecuperacion.VerificarToken(dto.Token, candidato.TokenHash))
@@ -219,32 +176,30 @@ public class AuthController : ControllerBase
                 break;
             }
         }
-        // Recorro y verifico uno por uno, por lo del salt de BCrypt.
 
         if (tokenValido is null)
-            return BadRequest(new
-            {
-                mensaje = "El enlace no es válido o ya expiró. Solicita uno nuevo."
-            });
-        // Un solo mensaje para tres casos distintos: token inexistente,
-        // ya usado, o expirado. Distinguirlos le daría información
-        // a alguien que esté probando tokens al azar.
+            return BadRequest(new { mensaje = "El enlace no es válido o ya expiró. Solicita uno nuevo." });
 
         var usuario = tokenValido.Usuario;
-
         usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NuevaPassword);
 
+        usuario.Desbloquear();
+        // ═══ NUEVO: RESTABLECER TAMBIÉN DESBLOQUEA ═══
+        // Piensa en el caso real: un cajero olvida su contraseña, la
+        // intenta cinco veces, queda bloqueado, y pide recuperarla.
+        // Si esto no desbloqueara, restablecería su contraseña y aun así
+        // no podría entrar durante 15 minutos.
+        //
+        // Demostró que controla su correo: es prueba suficiente de que
+        // la cuenta es suya. Este tipo de interacción entre dos
+        // funcionalidades es lo que se escapa cuando se construye cada
+        // una por separado.
+
         tokenValido.FechaUso = DateTime.UtcNow;
-        // ═══ QUEMA EL TOKEN ═══
-        // Un solo uso. Aunque alguien tuviera copia del enlace,
-        // a partir de este momento no sirve para nada.
 
         await _repositorioRecuperacion.GuardarAsync();
-        // Las dos cosas en un solo SaveChanges: EF las mete en la misma
-        // transacción. O se cambia la contraseña Y se quema el token,
-        // o no pasa ninguna de las dos.
-
-        Console.WriteLine($">>> Contraseña restablecida para {usuario.Username}");
+        // Contraseña nueva, desbloqueo y token quemado en una sola
+        // transacción: los tres objetos los sigue el mismo DbContext.
 
         return Ok(new { mensaje = "Contraseña actualizada. Ya puedes iniciar sesión." });
     }

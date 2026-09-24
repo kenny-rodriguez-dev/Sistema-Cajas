@@ -136,4 +136,29 @@ public class TurnosController : ControllerBase
         var tipos = await _repositorio.ListarTiposAsync();
         return Ok(tipos.Select(t => new { t.Id, t.Codigo, t.Descripcion }));
     }
+
+    // ─── CANCELAR ──────────────────────────────────────────────
+    [HttpPost("{turnoId}/cancelar")]
+    [Authorize(Roles = "Gestor")]
+    // El gestor asigna los turnos, así que también puede anularlos:
+    // un cliente que se fue sin ser atendido, un turno emitido por error.
+    public async Task<IActionResult> Cancelar(int turnoId)
+    {
+        var turno = await _repositorio.ObtenerPendienteAsync(turnoId);
+        // Reutilizo el método que ya existía: solo devuelve PENDIENTES.
+        // Un turno ya atendido no se puede cancelar: eso ya ocurrió.
+
+        if (turno is null)
+            return NotFound(new { mensaje = "El turno no existe o ya no está pendiente" });
+
+        turno.Estado = "CAN";
+        await _repositorio.GuardarAsync();
+
+        return Ok(new { mensaje = $"Turno {turno.Codigo} cancelado" });
+        // ═══ EL NÚMERO NO SE REUTILIZA ═══
+        // Si se cancela el AC0005, el siguiente sigue siendo AC0006.
+        // El contador solo sube. Es la decisión de la rebanada 4B:
+        // es preferible saltarse números a repetirlos. Dos clientes
+        // con el mismo papelito en la mano sería un problema real.
+    }
 }

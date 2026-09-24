@@ -3,61 +3,86 @@
 public class Usuario
 {
     public int Id { get; set; }
-
     public string Username { get; set; } = string.Empty;
-
     public string PasswordHash { get; set; } = string.Empty;
-    // MIRA BIEN EL NOMBRE: PasswordHash, no Password.
-    //
-    // No es cosmético. El nombre de la propiedad es un contrato con el
-    // programador que lea esto en seis meses: aquí NUNCA hay una contraseña
-    // real. Si algún día alguien mete texto plano en este campo, el nombre
-    // mismo lo delata.
-
     public string Correo { get; set; } = string.Empty;
 
-    // ─── LA RELACIÓN CON ROL: DOS PROPIEDADES, DOS TRABAJOS ───
-
     public int RolId { get; set; }
-    // Esta SÍ es una columna real en la tabla. Es la LLAVE FORÁNEA:
-    // guarda el número del rol al que pertenece este usuario.
-    // Es la "F" que aprendiste a buscar en el diagrama de Viamatica.
-
     public Rol Rol { get; set; } = null!;
-    // Esta NO es una columna. Es la NAVEGACIÓN: el atajo para escribir
-    // usuario.Rol.Nombre en vez de hacer la consulta a mano.
-    //
-    // El "null!" se lee: "compilador, ya sé que arranca en null, pero
-    // confía en mí, EF lo va a rellenar". Sin él te llena de advertencias.
-    //
-    // Regla de EF: la llave foránea se llama <Navegación> + "Id".
-    // Como la navegación se llama Rol, la llave debe llamarse RolId.
-    // Con ese nombre, EF conecta las dos solo, sin configurar nada.
 
     public bool Activo { get; set; } = true;
-    // Eliminación lógica, igual que en Cliente.
-
     public bool Aprobado { get; set; } = false;
-    // "El usuario gestor puede agregar usuarios pero un administrador
-    //  debe aprobar el usuario creado."
-    //
-    // Arranca en false a propósito: nace pendiente. Y esto va a ser
-    // parte del login: un usuario no aprobado no debe poder entrar.
 
     public int? CreadoPorUsuarioId { get; set; }
     public int? AprobadoPorUsuarioId { get; set; }
-    // Los "usercreate" y "userapproval" del diagrama original.
-    //
-    // El signo "?" significa que pueden ser NULL. Y tienen que poder:
-    // el primer administrador del sistema no fue creado por nadie.
-    //
-    // Son referencias a esta misma tabla. Por ahora las dejo como números
-    // sueltos; les pongo la navegación en la rebanada 3, cuando exista
-    // el flujo de aprobación de verdad.
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
     public ICollection<AsignacionCaja> Asignaciones { get; set; } = new List<AsignacionCaja>();
     public ICollection<SesionCaja> Sesiones { get; set; } = new List<SesionCaja>();
 
+    // ─── BLOQUEO (NUEVO) ───────────────────────────────────────
+    public int IntentosFallidos { get; set; } = 0;
+
+    public DateTime? BloqueadoHasta { get; set; }
+    // null = no está bloqueado.
+    // Con fecha = bloqueado hasta ese momento, en UTC.
+    // Mismo patrón de siempre: la ausencia de fecha ES el estado.
+
+    // ═══════════════════════════════════════════════════════════
+    //   LA PRIMERA ENTIDAD CON COMPORTAMIENTO
+    // ═══════════════════════════════════════════════════════════
+    //
+    // Hasta ahora todas tus entidades eran bolsas de datos: propiedades
+    // y nada más. Toda la lógica vivía en los controladores.
+    //
+    // Estos métodos son distintos: la regla de "cuántos intentos y
+    // cuánto dura el bloqueo" vive DENTRO de la entidad. Esto es lo que
+    // DDD llama un modelo de dominio rico, y es la diferencia práctica
+    // entre "usé la estructura de carpetas de DDD" y "apliqué DDD".
+    //
+    // ¿Qué se gana? Que la regla está en UN lugar. El login la usa,
+    // el desbloqueo del administrador la usa, la recuperación de
+    // contraseña la usa. Si mañana cambia a 3 intentos, se cambia aquí
+    // y el resto ni se entera.
+
+    public const int MaximoIntentos = 5;
+    public static readonly TimeSpan DuracionBloqueo = TimeSpan.FromMinutes(15);
+    // "const" y "static readonly" no son propiedades: EF no las
+    // convierte en columnas. Son constantes del negocio.
+
+    public bool EstaBloqueado(DateTime ahora) =>
+        BloqueadoHasta.HasValue && BloqueadoHasta.Value > ahora;
+    // ═══ ¿POR QUÉ RECIBE "ahora" EN VEZ DE USAR DateTime.UtcNow? ═══
+    // Porque así se puede PROBAR. Una prueba automática puede pasarle
+    // cualquier momento y verificar la regla sin esperar 15 minutos
+    // reales. Si la hora estuviera escrita adentro, la entidad sería
+    // imposible de probar sin trucos.
+
+    public void RegistrarIntentoFallido(DateTime ahora)
+    {
+        IntentosFallidos++;
+
+        if (IntentosFallidos >= MaximoIntentos)
+        {
+            BloqueadoHasta = ahora.Add(DuracionBloqueo);
+            IntentosFallidos = 0;
+            // Reinicio el contador al bloquear: cuando el bloqueo
+            // termine, el usuario tiene otros cinco intentos, no uno.
+        }
+    }
+
+    public void RegistrarIngresoExitoso()
+    {
+        IntentosFallidos = 0;
+        BloqueadoHasta = null;
+        // Una contraseña correcta borra el historial de fallos.
+        // Los intentos tienen que ser SEGUIDOS para bloquear.
+    }
+
+    public void Desbloquear()
+    {
+        IntentosFallidos = 0;
+        BloqueadoHasta = null;
+    }
 }

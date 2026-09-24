@@ -12,13 +12,16 @@ public class RepositorioUsuarios : IRepositorioUsuarios
     public RepositorioUsuarios(AppDbContext contexto) => _contexto = contexto;
 
     public async Task<Usuario?> ObtenerConRolAsync(int usuarioId) =>
-        await _contexto.Usuarios
-            .Include(u => u.Rol)
+        await _contexto.Usuarios.Include(u => u.Rol)
             .FirstOrDefaultAsync(u => u.Id == usuarioId);
 
+    public async Task<Usuario?> ObtenerPorUsernameAsync(string username) =>
+        await _contexto.Usuarios.Include(u => u.Rol)
+            .FirstOrDefaultAsync(u => u.Username == username);
+    // NUEVO. Lo necesita el login para dejar de usar el DbContext directo.
+
     public async Task<List<Usuario>> ListarAsync() =>
-        await _contexto.Usuarios
-            .Include(u => u.Rol)
+        await _contexto.Usuarios.Include(u => u.Rol)
             .OrderByDescending(u => u.FechaCreacion)
             .ToListAsync();
 
@@ -38,6 +41,4 @@ public class RepositorioUsuarios : IRepositorioUsuarios
 
     public async Task<int> ContarAdministradoresActivosAsync() =>
         await _contexto.Usuarios.CountAsync(u => u.RolId == 1 && u.Activo);
-    // Para impedir que el ultimo administrador se desactive a si mismo
-    // y deje el sistema sin nadie que pueda aprobar nada.
 }

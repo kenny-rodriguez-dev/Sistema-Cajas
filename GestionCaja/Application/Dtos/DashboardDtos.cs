@@ -46,6 +46,7 @@ public class IndicadoresUsuariosDto
     public int ConSesionAbierta { get; set; }
     public int Gestores { get; set; }
     public int Cajeros { get; set; }
+    public int Bloqueados { get; set; }
 }
 
 public class IndicadorCajaDto

@@ -828,6 +828,9 @@ namespace Infrastructure.Migrations
                     b.Property<int?>("AprobadoPorUsuarioId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("BloqueadoHasta")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Correo")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -838,6 +841,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("IntentosFallidos")
+                        .HasColumnType("int");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()

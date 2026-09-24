@@ -46,7 +46,8 @@ public class RepositorioDashboard : IRepositorioDashboard
                     PendientesAprobacion = lector.GetInt32(lector.GetOrdinal("PendientesAprobacion")),
                     Gestores = lector.GetInt32(lector.GetOrdinal("Gestores")),
                     Cajeros = lector.GetInt32(lector.GetOrdinal("Cajeros")),
-                    ConSesionAbierta = lector.GetInt32(lector.GetOrdinal("ConSesionAbierta"))
+                    ConSesionAbierta = lector.GetInt32(lector.GetOrdinal("ConSesionAbierta")),
+                    Bloqueados = lector.GetInt32(lector.GetOrdinal("Bloqueados")),
                 };
             }
             // GetOrdinal busca la columna POR NOMBRE y devuelve su posición.

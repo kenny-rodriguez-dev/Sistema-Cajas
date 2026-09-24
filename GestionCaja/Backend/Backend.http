@@ -1,65 +1,86 @@
 @host = http://localhost:5219
 
-@tokenCajero = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIzIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImNhamVybzAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDYWplcm8iLCJqdGkiOiIzMTgzMjI2ZC1lMGMxLTRjOWQtOWNkNS0yNmVhNTgzMWYxZDQiLCJleHAiOjE3OTAyMDcyOTEsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.FnrVj3uvPDZPfahFRvYgi9fHaYI-ZXVqPcb7SWiPY0Y
+@tokenAdmin = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImFkbWluMDAwMSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluaXN0cmFkb3IiLCJqdGkiOiI4MjgwZTQ5MS1mYzE0LTRlNzEtOTEzYi0wYWQ0OGZhYzE2NmEiLCJleHAiOjE3OTAyNjkwNDMsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.A4WaWILBiqu0Kia--FkIchefMiFxs-Vx6NDCZE6VgVQ
+@tokenGestor = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZWlkZW50aWZpZXIiOiIyIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6Imdlc3RvcjAwMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJHZXN0b3IiLCJqdGkiOiIwMmZhOGM1Yy02ZjZlLTQxOGQtOWYwMC02OGFhNzYyYWI5MjUiLCJleHAiOjE3OTAyNjkxNjIsImlzcyI6Ikdlc3Rpb25DYWphQXBpIiwiYXVkIjoiR2VzdGlvbkNhamFGcm9udGVuZCJ9.G4nVSx8LqV_ia1ffzZdUVZU13X4qnxjp7-Tn01KwCbg
 
-### 1. Login CAJERO
+### ═══ BLOQUEO ═══
+
+### 1-5. Contraseña equivocada CINCO veces (ejecútalo 5 veces)
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{ "username": "cajero0001", "password": "Cajero1234" }
+{ "username": "cajero0002", "password": "Equivocada1" }
 
-### 2. Pagar SIN caja abierta -> 409
-POST {{host}}/api/pagos
-Authorization: Bearer {{tokenCajero}}
+### 6. ⭐ Ahora con la contraseña CORRECTA -> 423
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{ "contratoId": 3, "periodo": "2026-09" }
+{ "username": "cajero0002", "password": "Cajero1234" }
 
-### 3. Abrir la caja 1
-POST {{host}}/api/cajas/1/abrir
-Authorization: Bearer {{tokenCajero}}
-
-### 4. Ver los contratos del cliente 1 (busca el que esté en VIG o REN)
-GET {{host}}/api/contratos/cliente/1
-Authorization: Bearer {{tokenCajero}}
-
-### 5. Pagar septiembre -> 200, con el monto del servicio
-# Cambia el contratoId por el del contrato ACTIVO del paso 4
-POST {{host}}/api/pagos
-Authorization: Bearer {{tokenCajero}}
+### 7. Login ADMIN
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{ "contratoId": 3, "periodo": "2026-09" }
+{ "username": "admin0001", "password": "Admin1234" }
 
-### 6. Pagar septiembre OTRA VEZ -> 409
-POST {{host}}/api/pagos
-Authorization: Bearer {{tokenCajero}}
+### 8. Lista de usuarios: cajero0002 con bloqueadoHasta
+GET {{host}}/api/usuarios
+Authorization: Bearer {{tokenAdmin}}
+
+### 9. Dashboard: bloqueados = 1
+GET {{host}}/api/dashboard
+Authorization: Bearer {{tokenAdmin}}
+
+### 10. Desbloquear (revisa el id de cajero0002 en el bloque 8)
+POST {{host}}/api/usuarios/4/desbloquear
+Authorization: Bearer {{tokenAdmin}}
+
+### 11. Ahora sí entra -> 200
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{ "contratoId": 3, "periodo": "2026-09" }
+{ "username": "cajero0002", "password": "Cajero1234" }
 
-### 7. Intentar mandar el monto -> se ignora
-POST {{host}}/api/pagos
-Authorization: Bearer {{tokenCajero}}
+### ═══ EL CONTADOR SE REINICIA ═══
+
+### 12. Dos intentos equivocados (ejecútalo 2 veces)
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{ "contratoId": 3, "periodo": "2026-10", "monto": 0.01 }
+{ "username": "cajero0003", "password": "Equivocada1" }
 
-### 8. Periodo inválido -> 400
-POST {{host}}/api/pagos
-Authorization: Bearer {{tokenCajero}}
+### 13. Uno correcto: el contador vuelve a 0
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{ "contratoId": 3, "periodo": "2026-13" }
+{ "username": "cajero0003", "password": "Cajero1234" }
 
-### 9. Historial de pagos del cliente 1
-GET {{host}}/api/pagos/cliente/1
-Authorization: Bearer {{tokenCajero}}
+### ═══ CANCELAR TURNOS ═══
 
-### 10. Cobrar un contrato SUSTITUIDO -> 409
-# Usa el id de un contrato en estado SUS del paso 4
-POST {{host}}/api/pagos
-Authorization: Bearer {{tokenCajero}}
+### 14. Login GESTOR
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{ "contratoId": 1, "periodo": "2026-11" }
+{ "username": "gestor0001", "password": "Gestor1234" }
+
+### 15. Crear un turno
+POST {{host}}/api/turnos
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
+
+{ "cajaId": 1, "tipoAtencionId": 1 }
+
+### 16. Cancelarlo (usa el id del bloque 15) -> 200
+POST {{host}}/api/turnos/15/cancelar
+Authorization: Bearer {{tokenGestor}}
+
+### 17. Cancelarlo otra vez -> 404
+POST {{host}}/api/turnos/1/cancelar
+Authorization: Bearer {{tokenGestor}}
+
+### 18. El siguiente turno NO reutiliza el número
+POST {{host}}/api/turnos
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
+
+{ "cajaId": 1, "tipoAtencionId": 1 }

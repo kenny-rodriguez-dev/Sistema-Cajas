@@ -74,4 +74,5 @@ public class UsuarioListaDto
     public string? CreadoPor { get; set; }
     // Ni PasswordHash ni nada parecido. El DTO decide que sale,
     // y un hash no tiene por que viajar al navegador jamas.
+    public DateTime? BloqueadoHasta { get; set; }
 }
