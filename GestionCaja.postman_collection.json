@@ -1,0 +1,1891 @@
+{
+  "info": {
+    "name": "Gestión de Caja - API completa",
+    "description": "Colección completa de la API de gestión de caja.\n\nCÓMO USARLA\n1. Revisa la variable 'host' de la colección y pon TU puerto.\n2. Corre un login de la carpeta 00. El token se guarda solo.\n3. Corre las demás peticiones: todas heredan el token.\n\nEl último login que corras es el usuario activo. Las carpetas indican qué rol necesitan.\nEl token dura 60 minutos. Si aparece un 401, vuelve a correr el login.\n\nLos ids de las URLs (clientes, contratos, turnos) son de ejemplo: ajústalos a los de tu base.\n\nDocumentación interactiva alternativa: {{host}}/swagger",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "host",
+      "value": "http://localhost:5266",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Autenticación (empieza aquí)",
+      "description": "",
+      "item": [
+        {
+          "name": "Login ADMINISTRADOR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/login",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Dashboard, usuarios, aprobar, desbloquear. No toca clientes ni contratos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin0001\",\n  \"password\": \"Admin1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.token) {",
+                  "    pm.collectionVariables.set('token', d.token);",
+                  "    console.log('Token guardado. Rol: ' + d.rol);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login GESTOR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/login",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Asigna cajeros a cajas, genera y cancela turnos, crea usuarios (quedan sin aprobar).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"gestor0001\",\n  \"password\": \"Gestor1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.token) {",
+                  "    pm.collectionVariables.set('token', d.token);",
+                  "    console.log('Token guardado. Rol: ' + d.rol);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login CAJERO 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/login",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Clientes, contratos, pagos, abre caja y atiende turnos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"cajero0001\",\n  \"password\": \"Cajero1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.token) {",
+                  "    pm.collectionVariables.set('token', d.token);",
+                  "    console.log('Token guardado. Rol: ' + d.rol);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login CAJERO 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/login",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Para probar que dos cajeros no operan la misma caja.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"cajero0002\",\n  \"password\": \"Cajero1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.token) {",
+                  "    pm.collectionVariables.set('token', d.token);",
+                  "    console.log('Token guardado. Rol: ' + d.rol);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login PENDIENTE (401 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/login",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Usuario sin aprobar: 401 con mensaje de pendiente de aprobación.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"pendiente0001\",\n  \"password\": \"Pendiente1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.token) {",
+                  "    pm.collectionVariables.set('token', d.token);",
+                  "    console.log('Token guardado. Rol: ' + d.rol);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login CLAVE MALA (401 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/login",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Mismo mensaje genérico que un usuario inexistente: no revela si la cuenta existe. Cinco seguidos bloquean la cuenta 15 minutos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin0001\",\n  \"password\": \"ClaveIncorrecta1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.token) {",
+                  "    pm.collectionVariables.set('token', d.token);",
+                  "    console.log('Token guardado. Rol: ' + d.rol);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login USUARIO FANTASMA (401 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/login",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Compara con la anterior: respuesta idéntica.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"fantasma0001\",\n  \"password\": \"LoQueSea1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.token) {",
+                  "    pm.collectionVariables.set('token', d.token);",
+                  "    console.log('Token guardado. Rol: ' + d.rol);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login BLOQUEADO (423 esperado tras 5 fallos)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/login",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Corre 'CLAVE MALA' cinco veces cambiando el usuario a cajero0002, y después esta. Aunque la contraseña es CORRECTA, responde 423: durante el bloqueo la contraseña ni se revisa.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"cajero0002\",\n  \"password\": \"Cajero1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.token) {",
+                  "    pm.collectionVariables.set('token', d.token);",
+                  "    console.log('Token guardado. Rol: ' + d.rol);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quién soy (según el token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/auth/yo",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "yo"
+              ]
+            },
+            "description": "Lee los claims del JWT."
+          }
+        },
+        {
+          "name": "Solicitar recuperación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/recuperar",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "recuperar"
+              ]
+            },
+            "description": "Responde lo mismo exista o no el correo. El enlace sale en la consola del backend.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"cajero1@gestioncaja.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Solicitar recuperación CORREO INEXISTENTE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/recuperar",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "recuperar"
+              ]
+            },
+            "description": "Misma respuesta que la anterior: no permite enumerar cuentas.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"noexiste@ejemplo.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Restablecer contraseña",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/auth/restablecer",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "restablecer"
+              ]
+            },
+            "description": "Token de un solo uso. Restablecer también desbloquea la cuenta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PEGA_EL_TOKEN_DE_LA_CONSOLA\",\n  \"nuevaPassword\": \"NuevaClave123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Menú dinámico",
+      "description": "",
+      "item": [
+        {
+          "name": "Mi menú según mi rol",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/menu",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "menu"
+              ]
+            },
+            "description": "Córrelo tras cada login distinto: la lista cambia. El rol sale del token, no de un parámetro."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Clientes (rol Cajero)",
+      "description": "",
+      "item": [
+        {
+          "name": "Listar activos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/clientes",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Listar incluyendo inactivos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/clientes?incluirInactivos=true",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "incluirInactivos",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Buscar por identificación",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/clientes/buscar?identificacion=0955512345",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "buscar"
+              ],
+              "query": [
+                {
+                  "key": "identificacion",
+                  "value": "0955512345"
+                }
+              ]
+            },
+            "description": "Requisito del enunciado. Devuelve también inactivos, con su marca. 404 si no existe."
+          }
+        },
+        {
+          "name": "Obtener por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/clientes/1",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "1"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear VÁLIDO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/clientes",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": "201 Created.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"Maria\",\n  \"apellidos\": \"Torres\",\n  \"identificacion\": \"0955512345\",\n  \"correo\": \"maria@ejemplo.com\",\n  \"telefono\": \"0991234567\",\n  \"direccion\": \"Ciudadela Los Rosales manzana 5 villa 12\",\n  \"referenciaDireccion\": \"Frente al parque central junto a la farmacia\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear INVÁLIDO (400 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/clientes",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": "Todos los errores de una vez, generados por [ApiController] a partir del DTO.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"A\",\n  \"apellidos\": \"\",\n  \"identificacion\": \"091234ABC\",\n  \"correo\": \"no-es-correo\",\n  \"telefono\": \"0812345678\",\n  \"direccion\": \"corta\",\n  \"referenciaDireccion\": \"tambien corta\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear DUPLICADO (409 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/clientes",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": "409 y no 400: el dato está bien escrito pero choca con uno existente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"Maria\",\n  \"apellidos\": \"Torres\",\n  \"identificacion\": \"0955512345\",\n  \"correo\": \"maria@ejemplo.com\",\n  \"telefono\": \"0991234567\",\n  \"direccion\": \"Ciudadela Los Rosales manzana 5 villa 12\",\n  \"referenciaDireccion\": \"Frente al parque central junto a la farmacia\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Actualizar",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/clientes/1",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "1"
+              ]
+            },
+            "description": "La identificación NO se puede editar: no existe en el DTO.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"Maria\",\n  \"apellidos\": \"Torres Vera\",\n  \"correo\": \"maria.torres@ejemplo.com\",\n  \"telefono\": \"0991234567\",\n  \"direccion\": \"Ciudadela Los Rosales manzana 5 villa 12\",\n  \"referenciaDireccion\": \"Frente al parque central junto a la farmacia\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Activar / desactivar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/clientes/1/estado",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "1",
+                "estado"
+              ]
+            },
+            "description": "Eliminación lógica. 409 si el cliente tiene un contrato vigente."
+          }
+        },
+        {
+          "name": "Carga masiva",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": [],
+                  "description": "El Key DEBE llamarse 'archivo', igual que el parámetro IFormFile."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{host}}/api/clientes/carga-masiva",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "carga-masiva"
+              ]
+            },
+            "description": "Todo o nada: si una fila falla, no se importa ninguna. Body > form-data > cambia el tipo de Text a File. NO pongas Content-Type a mano: Postman arma el boundary."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Usuarios (Administrador / Gestor)",
+      "description": "",
+      "item": [
+        {
+          "name": "Listar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/usuarios",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/usuarios",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "description": "Si lo crea un gestor, nace sin aprobar. Si lo crea el admin, nace aprobado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"cajero0010\",\n  \"password\": \"Cajero1234\",\n  \"correo\": \"cajero10@gestioncaja.com\",\n  \"rolId\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear con rol ADMINISTRADOR (400 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/usuarios",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "description": "[Range(2,3)] en el DTO: nadie puede crear administradores desde la API.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin0099\",\n  \"password\": \"Admin1234\",\n  \"correo\": \"otro@gestioncaja.com\",\n  \"rolId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Actualizar correo y rol (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/usuarios/3",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "3"
+              ]
+            },
+            "description": "El username no se edita: es la identidad en los registros históricos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"nuevo@gestioncaja.com\",\n  \"rolId\": 3,\n  \"activo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Aprobar (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/usuarios/6/aprobar",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "6",
+                "aprobar"
+              ]
+            },
+            "description": "Solo el administrador. Si un gestor pudiera aprobar, se auto-aprobaría."
+          }
+        },
+        {
+          "name": "Activar / desactivar (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/usuarios/3/estado",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "3",
+                "estado"
+              ]
+            },
+            "description": "No puedes desactivarte a ti mismo ni al último administrador activo."
+          }
+        },
+        {
+          "name": "Desbloquear (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/usuarios/4/desbloquear",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "4",
+                "desbloquear"
+              ]
+            },
+            "description": "409 si el usuario no está bloqueado."
+          }
+        },
+        {
+          "name": "Carga masiva (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": [],
+                  "description": "El Key DEBE llamarse 'archivo', igual que el parámetro IFormFile."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{host}}/api/usuarios/carga-masiva",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "carga-masiva"
+              ]
+            },
+            "description": "Columnas: Username, Password, Correo, RolId. Body > form-data > cambia el tipo de Text a File. NO pongas Content-Type a mano: Postman arma el boundary."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Cajas y sesiones",
+      "description": "",
+      "item": [
+        {
+          "name": "Listar cajas (Gestor/Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/cajas",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "cajas"
+              ]
+            },
+            "description": "Cajeros asignados (con id) y quién la está operando."
+          }
+        },
+        {
+          "name": "Mis cajas (Cajero)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/cajas/mis-cajas",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "cajas",
+                "mis-cajas"
+              ]
+            },
+            "description": "Solo las cajas asignadas al cajero, y si tiene sesión abierta."
+          }
+        },
+        {
+          "name": "Asignar cajero a caja 1 (Gestor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/cajas/1/asignaciones",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "cajas",
+                "1",
+                "asignaciones"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuarioId\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Asignar un TERCERO (409 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/cajas/1/asignaciones",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "cajas",
+                "1",
+                "asignaciones"
+              ]
+            },
+            "description": "Máximo 2 por caja. El diagrama no puede expresar ese límite: vive en código.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuarioId\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Quitar cajero de caja 1 (Gestor)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/cajas/1/asignaciones/5",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "cajas",
+                "1",
+                "asignaciones",
+                "5"
+              ]
+            },
+            "description": "409 si el cajero tiene esa caja abierta en este momento."
+          }
+        },
+        {
+          "name": "Abrir caja 1 (Cajero)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/cajas/1/abrir",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "cajas",
+                "1",
+                "abrir"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Abrir la MISMA caja con otro cajero (409 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/cajas/1/abrir",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "cajas",
+                "1",
+                "abrir"
+              ]
+            },
+            "description": "Lo garantiza un índice único filtrado en SQL Server: [FechaCierre] IS NULL."
+          }
+        },
+        {
+          "name": "Cerrar mi sesión de caja",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/cajas/cerrar",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "cajas",
+                "cerrar"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Turnos",
+      "description": "",
+      "item": [
+        {
+          "name": "Tipos de atención",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/turnos/tipos",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "turnos",
+                "tipos"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear turno AC (Gestor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/turnos",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "turnos"
+              ]
+            },
+            "description": "Genera AC0001, AC0002... con el stored procedure sp_SiguienteNumeroTurno.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cajaId\": 1,\n  \"tipoAtencionId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear turno PS (Gestor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/turnos",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "turnos"
+              ]
+            },
+            "description": "Arranca en PS0001: el contador es por tipo y por día.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cajaId\": 1,\n  \"tipoAtencionId\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Turnos del día",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/turnos?cajaId=1",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "turnos"
+              ],
+              "query": [
+                {
+                  "key": "cajaId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Atender (Cajero)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/turnos/1/atender",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "turnos",
+                "1",
+                "atender"
+              ]
+            },
+            "description": "409 si el cajero no tiene sesión de caja abierta."
+          }
+        },
+        {
+          "name": "Cancelar (Gestor)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/turnos/2/cancelar",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "turnos",
+                "2",
+                "cancelar"
+              ]
+            },
+            "description": "Solo pendientes. El número NO se reutiliza: el contador solo sube."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Contratos (Cajero)",
+      "description": "",
+      "item": [
+        {
+          "name": "Servicios disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/contratos/servicios",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "servicios"
+              ]
+            },
+            "description": "Con velocidad, precio y equipos."
+          }
+        },
+        {
+          "name": "Formas de pago",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/contratos/formas-pago",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "formas-pago"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Historial del cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/contratos/cliente/1",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Toda la historia: VIG, REN, SUS, CAN. Nada se borra."
+          }
+        },
+        {
+          "name": "Contratar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/contratos",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "contratos"
+              ]
+            },
+            "description": "Anota la fechaFin: la vas a comparar.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": 1,\n  \"servicioId\": 1,\n  \"formaPagoId\": 1,\n  \"mesesDuracion\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Contratar otra vez (409 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/contratos",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "contratos"
+              ]
+            },
+            "description": "Un cliente, un contrato activo: índice único filtrado sobre VIG y REN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": 1,\n  \"servicioId\": 2,\n  \"formaPagoId\": 1,\n  \"mesesDuracion\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cambiar de servicio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/contratos/1/cambiar-servicio",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "1",
+                "cambiar-servicio"
+              ]
+            },
+            "description": "El viejo pasa a SUS, nace uno en REN, y la fecha de fin se CONSERVA. En una transacción.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nuevoServicioId\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cambiar forma de pago",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/contratos/2/cambiar-forma-pago",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "2",
+                "cambiar-forma-pago"
+              ]
+            },
+            "description": "Aquí sí se edita el mismo registro: no cambia el valor del contrato.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nuevaFormaPagoId\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cancelar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/contratos/2/cancelar",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "2",
+                "cancelar"
+              ]
+            },
+            "description": "La fecha de fin pasa a hoy. Regla opuesta al cambio de servicio."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Pagos (Cajero, con caja abierta)",
+      "description": "",
+      "item": [
+        {
+          "name": "Registrar pago",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/pagos",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "pagos"
+              ]
+            },
+            "description": "El MONTO lo calcula el servidor a partir del precio del servicio. 409 sin caja abierta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contratoId\": 2,\n  \"periodo\": \"2026-09\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mismo mes otra vez (409 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/pagos",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "pagos"
+              ]
+            },
+            "description": "Índice único (ClienteId, Periodo): un mes, un pago.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contratoId\": 2,\n  \"periodo\": \"2026-09\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Intentar manipular el monto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/pagos",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "pagos"
+              ]
+            },
+            "description": "El campo monto no existe en el DTO: se ignora. Se cobra el precio real.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contratoId\": 2,\n  \"periodo\": \"2026-10\",\n  \"monto\": 0.01\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Periodo inválido (400 esperado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/api/pagos",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "pagos"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contratoId\": 2,\n  \"periodo\": \"2026-13\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Historial de pagos del cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/pagos/cliente/1",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "pagos",
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Cada pago guarda el monto y la forma de pago DEL DÍA en que se cobró."
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Dashboard e indicadores",
+      "description": "",
+      "item": [
+        {
+          "name": "Bienvenida (todos los roles)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/dashboard/bienvenida",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "bienvenida"
+              ]
+            },
+            "description": "Córrelo con los tres logins: 'descripcionTurnos' cambia según el rol."
+          }
+        },
+        {
+          "name": "Dashboard de hoy (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/dashboard",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "dashboard"
+              ]
+            },
+            "description": "Un solo viaje a la base: sp_IndicadoresDashboard devuelve tres conjuntos de resultados."
+          }
+        },
+        {
+          "name": "Dashboard con fechas (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/dashboard?desde=2026-09-01&hasta=2026-09-30",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2026-09-01"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-09-30"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Dashboard rango vacío (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/dashboard?desde=2026-01-01&hasta=2026-01-31",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-01-31"
+                }
+              ]
+            },
+            "description": "Los turnos salen en 0; los contratos activos no cambian: están activos AHORA."
+          }
+        }
+      ]
+    }
+  ]
+}

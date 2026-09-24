@@ -6,31 +6,56 @@ using Application.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
-// Los using ya reflejan las cuatro capas.
-// Fíjate que Backend conoce a todas: es la capa de más afuera.
+using Backend.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ╔═══════════════════════════════════════════════════════════╗
 // ║  MITAD 1: REGISTRO                                        ║
-// ║  TODO lo que empiece con builder.Services va AQUÍ.        ║
 // ╚═══════════════════════════════════════════════════════════╝
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+
+builder.Services.AddOpenApi(opciones =>
+{
+    opciones.AddDocumentTransformer((documento, contexto, cancelacion) =>
+    {
+        documento.Info = new()
+        {
+            Title = "Gestión de Caja API",
+            Version = "v1",
+            Description = "API para la gestión de caja de una empresa de servicios de internet."
+        };
+        return Task.CompletedTask;
+        // Un transformador en línea: pone título y descripción al documento.
+    });
+
+    opciones.AddDocumentTransformer<TransformadorSeguridadBearer>();
+    // El nuestro, con el esquema de seguridad.
+});
 
 builder.Services.AddDbContext<AppDbContext>(opciones =>
-    opciones.UseSqlServer(
-        builder.Configuration.GetConnectionString("BaseDeDatos")
-    )
-);
+    opciones.UseSqlServer(builder.Configuration.GetConnectionString("BaseDeDatos")));
 
+// ─── Servicios ───
 builder.Services.AddScoped<ServicioDeTokens>();
+builder.Services.AddScoped<IServicioRecuperacion, ServicioRecuperacion>();
+builder.Services.AddScoped<ILectorClientesArchivo, LectorClientesExcel>();
+builder.Services.AddScoped<ILectorUsuariosArchivo, LectorUsuariosExcel>();
 
+// ─── Repositorios: uno por área del negocio ───
 builder.Services.AddScoped<IRepositorioClientes, RepositorioClientes>();
-// ↑ ESTA ES LA QUE ESTABA MAL UBICADA.
-//   Tiene que estar aquí arriba, con las demás.
+builder.Services.AddScoped<IRepositorioUsuarios, RepositorioUsuarios>();
+builder.Services.AddScoped<IRepositorioCajas, RepositorioCajas>();
+builder.Services.AddScoped<IRepositorioTurnos, RepositorioTurnos>();
+builder.Services.AddScoped<IRepositorioContratos, RepositorioContratos>();
+builder.Services.AddScoped<IRepositorioPagos, RepositorioPagos>();
+builder.Services.AddScoped<IRepositorioDashboard, RepositorioDashboard>();
+builder.Services.AddScoped<IRepositorioRecuperacion, RepositorioRecuperacion>();
+// Cada línea: "cuando alguien pida la interfaz, entrégale esta clase".
+// Es el único lugar del sistema donde contrato e implementación se tocan.
 
+// ─── Autenticación ───
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opciones =>
     {
@@ -38,8 +63,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Clave"]!)
-            ),
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Clave"]!)),
             ValidateIssuer = true,
             ValidIssuer = builder.Configuration["Jwt:Emisor"],
             ValidateAudience = true,
@@ -51,18 +75,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-const string PoliticaCors = "PermitirFrontend";
-
+// ─── CORS ───
 var origenesPermitidos = builder.Configuration
     .GetSection("Cors:OrigenesPermitidos")
     .Get<string[]>() ?? [];
-// Lee la LISTA del appsettings.json y la convierte en un arreglo.
-// GetSection apunta a la sección; Get<string[]>() la transforma.
-//
-// Si la sección no existe, "?? []" deja una lista vacía, y CORS no
-// acepta a nadie. Es a propósito: si algo falla en la configuración,
-// es mejor bloquear todo por error que dejar entrar a cualquiera.
-// Eso se llama "fallar cerrado", y es un principio de seguridad.
+
+const string PoliticaCors = "PermitirFrontend";
 
 builder.Services.AddCors(opciones =>
 {
@@ -70,61 +88,49 @@ builder.Services.AddCors(opciones =>
     {
         politica
             .WithOrigins(origenesPermitidos)
-            // Ya no depende de FrontendUrl. Cambiar a dónde apunta
-            // el enlace de recuperación nunca más afecta a CORS.
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
 
 // ╔═══════════════════════════════════════════════════════════╗
-// ║  ══════════════  LA FRONTERA  ══════════════              ║
-// ║  Aquí la caja de herramientas se CIERRA.                  ║
-// ║  Cualquier builder.Services debajo de esta línea          ║
-// ║  revienta con "collection is read-only".                  ║
+// ║  LA FRONTERA                                              ║
 // ╚═══════════════════════════════════════════════════════════╝
 
-builder.Services.AddScoped<IRepositorioCajas, RepositorioCajas>();
-builder.Services.AddScoped<IRepositorioTurnos, RepositorioTurnos>();
-builder.Services.AddScoped<IRepositorioContratos, RepositorioContratos>();
-builder.Services.AddScoped<ILectorClientesArchivo, LectorClientesExcel>();
-builder.Services.AddScoped<IRepositorioDashboard, RepositorioDashboard>();
-builder.Services.AddScoped<IRepositorioUsuarios, RepositorioUsuarios>();
-builder.Services.AddScoped<ILectorUsuariosArchivo, LectorUsuariosExcel>();
-builder.Services.AddScoped<IRepositorioRecuperacion, RepositorioRecuperacion>();
-builder.Services.AddScoped<IServicioRecuperacion, ServicioRecuperacion>();
-builder.Services.AddScoped<IRepositorioPagos, RepositorioPagos>();
 var app = builder.Build();
 
-// ─── MIGRACIONES Y SIEMBRA ───────────────────────────────────
-
+// ─── Migraciones y siembra ───
 using (var alcance = app.Services.CreateScope())
 {
     var contexto = alcance.ServiceProvider.GetRequiredService<AppDbContext>();
-
     await contexto.Database.MigrateAsync();
-    // Aplica todas las migraciones pendientes, igual que Update-Database.
-    // Lee __EFMigrationsHistory para saber cuáles faltan, así que
-    // correrlo mil veces es inofensivo.
-    //
-    // NOTA HONESTA: esto está bien para desarrollo y para una demo.
-    // En producción de verdad no se hace, porque si levantas tres
-    // copias de la aplicación a la vez, las tres intentarían migrar
-    // al mismo tiempo. Allí las migraciones se aplican en un paso
-    // aparte del despliegue. Es el tipo de matiz que vale decir en
-    // una entrevista si te preguntan por esta línea.
-
     await SembradorDeDatos.SembrarAsync(contexto);
 }
 
 // ╔═══════════════════════════════════════════════════════════╗
 // ║  MITAD 2: LA TUBERÍA                                      ║
-// ║  TODO lo que empiece con app. va AQUÍ.                    ║
 // ╚═══════════════════════════════════════════════════════════╝
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // El documento en texto: /openapi/v1.json
+
+    app.UseSwaggerUI(opciones =>
+    {
+        opciones.SwaggerEndpoint("/openapi/v1.json", "Gestión de Caja API v1");
+        // Le dice a la pantalla de dónde leer el documento.
+
+        opciones.DocumentTitle = "Gestión de Caja - API";
+
+        opciones.EnablePersistAuthorization();
+        // Guarda el token en el navegador: si recargas la página, no
+        // tienes que volver a pegarlo.
+    });
+    // ═══ SOLO EN DESARROLLO, A PROPÓSITO ═══
+    // Swagger es un mapa completo de tu API: cada endpoint, cada campo,
+    // cada respuesta. En producción, publicarlo es regalarle a un
+    // atacante el plano del edificio.
 }
 
 app.UseCors(PoliticaCors);
