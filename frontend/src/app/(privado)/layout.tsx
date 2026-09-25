@@ -56,10 +56,23 @@ export default function LayoutPrivado({
             .finally(() => setCargando(false));
     }, [router]);
 
-    function cerrarSesion() {
+    async function cerrarSesion() {
+        try {
+            await apiFetch('/api/auth/logout', { method: 'POST' });
+        } catch {
+            // Si no hay red, igual cerramos la sesión en este navegador.
+            // El usuario pidió salir: no lo dejamos atrapado por un fallo de conexión.
+        }
         borrarSesion();
         router.replace('/login');
     }
+    // ═══ EL ORDEN ES TODO ═══
+    // Primero se avisa al backend, DESPUÉS se borra el token local.
+    //
+    // Al revés no funciona: si borrara primero, apiFetch ya no encontraría
+    // el token para pegarlo en la cabecera, y la petición de logout llegaría
+    // sin identificar. El backend respondería 401 y la sesión seguiría viva
+    // en el servidor, que es justo lo que queremos evitar.
 
     if (cargando) {
         return (

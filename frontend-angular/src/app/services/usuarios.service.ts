@@ -41,4 +41,8 @@ export class UsuariosService {
         formulario.append('archivo', archivo);
         return this.http.post<ResultadoCarga>(`${this.url}/carga-masiva`, formulario);
     }
+
+    cerrarSesiones(id: number) {
+        return this.http.post<Mensaje>(`${this.url}/${id}/cerrar-sesiones`, {});
+    }
 }

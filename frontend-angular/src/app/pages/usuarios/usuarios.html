@@ -185,6 +185,11 @@
                             Bloqueado hasta {{ u.bloqueadoHasta | date: 'HH:mm' }}
                         </span>
                         }
+                        @if (u.sesionesActivas > 0) {
+                        <span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                            En línea{{ u.sesionesActivas > 1 ? ' (' + u.sesionesActivas + ')' : '' }}
+                        </span>
+                        }
                         <!-- El pipe date convierte la hora UTC a tu hora local
                      solo, gracias a la "Z" del backend. -->
                     </div>
@@ -207,6 +212,12 @@
                             class="text-xs border rounded px-3 py-1 disabled:text-gray-400">
                             {{ u.activo ? 'Desactivar' : 'Activar' }}
                         </button>
+                        @if (u.sesionesActivas > 0) {
+                        <button (click)="cerrarSesiones(u)" [disabled]="ocupado()"
+                            class="text-xs border border-red-300 text-red-700 rounded px-3 py-1 disabled:text-gray-400">
+                            Cerrar sesiones
+                        </button>
+                        }
                         }
                     </div>
                 </td>

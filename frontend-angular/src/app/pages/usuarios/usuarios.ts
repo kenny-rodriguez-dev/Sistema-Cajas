@@ -215,6 +215,10 @@ export class Usuarios {
   aprobar(id: number): void { this.ejecutar(this.servicio.aprobar(id)); }
   cambiarEstado(id: number): void { this.ejecutar(this.servicio.cambiarEstado(id)); }
   desbloquear(id: number): void { this.ejecutar(this.servicio.desbloquear(id)); }
+  cerrarSesiones(u: UsuarioLista): void {
+    if (!window.confirm(`¿Cerrar todas las sesiones de ${u.username}? Tendrá que volver a iniciar sesión.`)) return;
+    this.ejecutar(this.servicio.cerrarSesiones(u.id));
+  }
 
   seleccionar(evento: Event): void {
     this.archivo.set((evento.target as HTMLInputElement).files?.[0] ?? null);

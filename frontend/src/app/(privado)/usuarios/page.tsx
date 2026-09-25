@@ -15,6 +15,7 @@ type Usuario = {
     fechaCreacion: string;
     creadoPor: string | null;
     bloqueadoHasta: string | null;
+    sesionesActivas: number;
     // null si no está bloqueado, o si el bloqueo ya venció:
     // el backend se encarga de mandarlo así.
 };
@@ -114,6 +115,11 @@ export default function UsuariosPage() {
         } finally {
             setOcupado(false);
         }
+    }
+
+    function cerrarSesiones(u: Usuario) {
+        if (!window.confirm(`¿Cerrar todas las sesiones de ${u.username}? Tendrá que volver a iniciar sesión.`)) return;
+        accion(`/api/usuarios/${u.id}/cerrar-sesiones`);
     }
 
     function empezarEdicion(u: Usuario) {
@@ -371,6 +377,11 @@ export default function UsuariosPage() {
                                             Bloqueado hasta {hora(u.bloqueadoHasta)}
                                         </span>
                                     )}
+                                    {u.sesionesActivas > 0 && (
+                                        <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                                            En línea{u.sesionesActivas > 1 ? ` (${u.sesionesActivas})` : ''}
+                                        </span>
+                                    )}
                                 </div>
                             </td>
                             <td className="px-4 py-2 text-gray-500">{u.creadoPor ?? '—'}</td>
@@ -399,6 +410,12 @@ export default function UsuariosPage() {
                                                     className="text-xs border rounded px-3 py-1 disabled:text-gray-400">
                                                     {u.activo ? 'Desactivar' : 'Activar'}
                                                 </button>
+                                                {u.sesionesActivas > 0 && (
+                                                    <button onClick={() => cerrarSesiones(u)} disabled={ocupado}
+                                                        className="text-xs border border-red-300 text-red-700 rounded px-3 py-1 disabled:text-gray-400">
+                                                        Cerrar sesiones
+                                                    </button>
+                                                )}
                                             </>
                                         )}
                                         {/* Los administradores no se editan ni se desactivan

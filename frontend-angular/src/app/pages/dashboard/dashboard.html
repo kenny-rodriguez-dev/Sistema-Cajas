@@ -62,8 +62,16 @@
             <p class="text-2xl font-bold mt-1">{{ d.usuarios.cajeros }}</p>
         </div>
         <div class="bg-white p-4 rounded-lg border">
-            <p class="text-xs text-gray-500 uppercase">Sesión abierta</p>
-            <p class="text-2xl font-bold mt-1 text-blue-600">{{ d.usuarios.conSesionAbierta }}</p>
+            <p class="text-xs text-gray-500 uppercase">Con sesión activa</p>
+            <p class="text-2xl font-bold mt-1 text-green-600">{{ d.usuarios.conSesionActiva }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Sin sesión</p>
+            <p class="text-2xl font-bold mt-1 text-gray-400">{{ d.usuarios.sinSesionActiva }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-xs text-gray-500 uppercase">Operando una caja</p>
+            <p class="text-2xl font-bold mt-1 text-blue-600">{{ d.usuarios.operandoCaja }}</p>
         </div>
     </div>
 

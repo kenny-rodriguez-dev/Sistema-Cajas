@@ -8,7 +8,9 @@ type IndicadoresUsuarios = {
     activos: number;
     inactivos: number;
     pendientesAprobacion: number;
-    conSesionAbierta: number;
+    conSesionActiva: number;
+    sinSesionActiva: number;
+    operandoCaja: number;
     gestores: number;
     cajeros: number;
     bloqueados: number;
@@ -181,7 +183,9 @@ export default function DashboardPage() {
                         <Indicador etiqueta="Bloqueados" valor={datos.usuarios.bloqueados} color="text-red-600" />
                         <Indicador etiqueta="Gestores" valor={datos.usuarios.gestores} />
                         <Indicador etiqueta="Cajeros" valor={datos.usuarios.cajeros} />
-                        <Indicador etiqueta="Sesión abierta" valor={datos.usuarios.conSesionAbierta} color="text-blue-600" />
+                        <Indicador etiqueta="Con sesión activa" valor={datos.usuarios.conSesionActiva} color="text-green-600" />
+                        <Indicador etiqueta="Sin sesión" valor={datos.usuarios.sinSesionActiva} color="text-gray-400" />
+                        <Indicador etiqueta="Operando una caja" valor={datos.usuarios.operandoCaja} color="text-blue-600" />
                     </div>
 
                     {/* ─── PERIODO ─── */}

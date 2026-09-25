@@ -69,6 +69,7 @@ export interface UsuarioLista {
     fechaCreacion: string;
     creadoPor: string | null;
     bloqueadoHasta: string | null;
+    sesionesActivas: number;
 }
 
 export interface CrearUsuarioDto {
@@ -84,7 +85,9 @@ export interface IndicadoresUsuarios {
     activos: number;
     inactivos: number;
     pendientesAprobacion: number;
-    conSesionAbierta: number;
+    conSesionActiva: number;
+    sinSesionActiva: number;
+    operandoCaja: number;
     gestores: number;
     cajeros: number;
     bloqueados: number;

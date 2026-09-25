@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { tap } from 'rxjs';
+import { catchError, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { RespuestaLogin } from '../models/modelos';
 import { SesionService } from './sesion.service';
@@ -13,17 +13,6 @@ export class AuthService {
     login(username: string, password: string) {
         return this.http
             .post<RespuestaLogin>(`${environment.apiUrl}/api/auth/login`, { username, password })
-            // ═══ ESTO DEVUELVE UN OBSERVABLE, NO UNA PROMESA ═══
-            //
-            // Es la diferencia más grande con React, y la única de verdad
-            // nueva. Un Observable es un FLUJO de valores en el tiempo;
-            // una promesa es UN valor futuro.
-            //
-            // Lo más importante en la práctica: un Observable NO SE EJECUTA
-            // hasta que alguien se suscribe. Si escribes esta línea y no
-            // llamas a .subscribe(), la petición jamás sale.
-            //
-            // Es el error número uno de quien viene de fetch.
             .pipe(
                 tap((respuesta) => {
                     this.sesionService.guardar({
@@ -32,9 +21,6 @@ export class AuthService {
                         rol: respuesta.rol,
                     });
                 })
-                // tap() = "haz esto con el valor que pasa, sin modificarlo".
-                // Guardo la sesión aquí para que el componente no tenga que
-                // acordarse de hacerlo.
             );
     }
 
@@ -50,7 +36,26 @@ export class AuthService {
         );
     }
 
-    logout(): void {
-        this.sesionService.borrar();
+    logout() {
+        return this.http.post(`${environment.apiUrl}/api/auth/logout`, {}).pipe(
+            catchError(() => of(null)),
+            // Si el backend no responde, convierto el error en un valor normal
+            // (null). Así el cierre de sesión local sigue adelante igual:
+            // el usuario pidió salir y no debe quedar atrapado.
+
+            tap(() => this.sesionService.borrar())
+            // Recién después de la petición, borro el token local.
+            // Mismo orden que en Next.js: primero avisar, después borrar.
+            // El interceptor necesita el token para pegarlo en la cabecera.
+        );
+        // ═══ OJO: ESTO CAMBIÓ Y ES FÁCIL DE ROMPER ═══
+        // Antes logout() borraba la sesión en el acto. Ahora devuelve un
+        // Observable. Y un Observable NO HACE NADA hasta que alguien se
+        // suscribe: si llamas this.auth.logout() sin .subscribe(), no sale
+        // la petición Y TAMPOCO se borra la sesión. El botón parecería no
+        // hacer nada.
+        //
+        // Es la regla de la primera sesión de Angular, aplicada a un lugar
+        // donde un error sería silencioso.
     }
 }
