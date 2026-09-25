@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<Contrato> Contratos => Set<Contrato>();
     public DbSet<TokenRecuperacion> TokensRecuperacion => Set<TokenRecuperacion>();
     public DbSet<Pago> Pagos => Set<Pago>();
+    public DbSet<SesionUsuario> SesionesUsuario => Set<SesionUsuario>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -324,6 +325,24 @@ public class AppDbContext : DbContext
                    .HasForeignKey(p => p.RegistradoPorUsuarioId).OnDelete(DeleteBehavior.Restrict);
             // Restrict en todas: un pago es historia financiera.
             // Nada puede borrarse si arrastra pagos con él.
+        });
+
+        // ─── SESIÓN DE USUARIO ───
+        modelo.Entity<SesionUsuario>(entidad =>
+        {
+            entidad.Property(s => s.Jti).HasMaxLength(36).IsFixedLength().IsRequired();
+            // Un Guid en texto siempre mide 36: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx".
+
+            entidad.HasIndex(s => s.Jti).IsUnique();
+            // ═══ ESTE ÍNDICE ES EL QUE PAGA LA CUENTA ═══
+            // Se consulta en CADA petición autenticada. Sin índice sería
+            // recorrer la tabla entera cada vez; con índice único,
+            // SQL Server va directo a la fila.
+
+            entidad.Property(s => s.MotivoCierre).HasMaxLength(30);
+
+            entidad.HasOne(s => s.Usuario).WithMany()
+                   .HasForeignKey(s => s.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         });
     }
     protected override void ConfigureConventions(ModelConfigurationBuilder configuracion)

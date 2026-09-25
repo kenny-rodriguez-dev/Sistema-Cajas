@@ -75,4 +75,6 @@ public class UsuarioListaDto
     // Ni PasswordHash ni nada parecido. El DTO decide que sale,
     // y un hash no tiene por que viajar al navegador jamas.
     public DateTime? BloqueadoHasta { get; set; }
+    public int SesionesActivas { get; set; }
+    // Cuántos dispositivos tiene conectados ahora mismo.
 }

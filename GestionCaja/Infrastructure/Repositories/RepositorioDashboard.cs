@@ -46,7 +46,8 @@ public class RepositorioDashboard : IRepositorioDashboard
                     PendientesAprobacion = lector.GetInt32(lector.GetOrdinal("PendientesAprobacion")),
                     Gestores = lector.GetInt32(lector.GetOrdinal("Gestores")),
                     Cajeros = lector.GetInt32(lector.GetOrdinal("Cajeros")),
-                    ConSesionAbierta = lector.GetInt32(lector.GetOrdinal("ConSesionAbierta")),
+                    ConSesionActiva = lector.GetInt32(lector.GetOrdinal("ConSesionActiva")),
+                    OperandoCaja = lector.GetInt32(lector.GetOrdinal("OperandoCaja")),
                     Bloqueados = lector.GetInt32(lector.GetOrdinal("Bloqueados")),
                 };
             }

@@ -7,14 +7,13 @@ using Domain.Entities;
 using Infrastructure.Services;
 
 namespace Backend.Controllers;
-// Fíjate en los using: ya no está Infrastructure.Data ni EntityFramework.
-// Este controlador ya no sabe que existe una base de datos.
 
 [ApiController]
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly IRepositorioUsuarios _repositorioUsuarios;
+    private readonly IRepositorioSesiones _repositorioSesiones;
     private readonly ServicioDeTokens _servicioDeTokens;
     private readonly IRepositorioRecuperacion _repositorioRecuperacion;
     private readonly IServicioRecuperacion _servicioRecuperacion;
@@ -22,12 +21,14 @@ public class AuthController : ControllerBase
 
     public AuthController(
         IRepositorioUsuarios repositorioUsuarios,
+        IRepositorioSesiones repositorioSesiones,
         ServicioDeTokens servicioDeTokens,
         IRepositorioRecuperacion repositorioRecuperacion,
         IServicioRecuperacion servicioRecuperacion,
         IConfiguration configuracion)
     {
         _repositorioUsuarios = repositorioUsuarios;
+        _repositorioSesiones = repositorioSesiones;
         _servicioDeTokens = servicioDeTokens;
         _repositorioRecuperacion = repositorioRecuperacion;
         _servicioRecuperacion = servicioRecuperacion;
@@ -39,31 +40,17 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login(LoginDto dto)
     {
         var ahora = DateTime.UtcNow;
-        // Una sola lectura de la hora para todo el método. Si la pidiera
-        // en cada línea, dos comprobaciones podrían ver momentos distintos.
-
         var usuario = await _repositorioUsuarios.ObtenerPorUsernameAsync(dto.Username);
 
-        // ═══ PASO 1: EL BLOQUEO, ANTES QUE NADA ═══
         if (usuario is not null && usuario.EstaBloqueado(ahora))
         {
             int minutos = (int)Math.Ceiling((usuario.BloqueadoHasta!.Value - ahora).TotalMinutes);
-            // Ceiling redondea hacia arriba: con 30 segundos restantes
-            // dice "1 minuto", no "0 minutos".
-
             return StatusCode(423, new
             {
                 mensaje = $"Cuenta bloqueada por demasiados intentos fallidos. Intenta en {minutos} minuto(s)."
             });
-            // 423 Locked: "el recurso está bloqueado". Es el código que
-            // mejor describe esto. Otros sistemas usan 429 (demasiadas
-            // peticiones); los dos son defendibles.
-            //
-            // Y fíjate que la contraseña NO SE REVISÓ. Ni la correcta
-            // abre la cuenta mientras dure el bloqueo.
         }
 
-        // ═══ PASO 2: LA CONTRASEÑA ═══
         bool credencialesValidas =
             usuario is not null &&
             BCrypt.Net.BCrypt.Verify(dto.Password, usuario.PasswordHash);
@@ -74,20 +61,12 @@ public class AuthController : ControllerBase
             {
                 usuario.RegistrarIntentoFallido(ahora);
                 await _repositorioUsuarios.GuardarAsync();
-                // La entidad decide si con este intento se bloquea.
-                // El controlador ni sabe cuántos intentos hacen falta.
             }
-
             return Unauthorized(new { mensaje = "Usuario o contraseña incorrectos" });
-            // Mismo mensaje genérico de siempre, exista o no el usuario.
         }
 
-        // ═══ PASO 3: CONTRASEÑA CORRECTA ═══
         usuario!.RegistrarIngresoExitoso();
         await _repositorioUsuarios.GuardarAsync();
-        // El contador vuelve a cero, AUNQUE más abajo el login falle por
-        // estar inactivo o sin aprobar. Quien llegó aquí demostró que
-        // conoce la contraseña: no hay por qué seguir contándole fallos.
 
         if (!usuario.Activo)
             return Unauthorized(new { mensaje = "El usuario está inactivo" });
@@ -98,7 +77,17 @@ public class AuthController : ControllerBase
                 mensaje = "El usuario está pendiente de aprobación por un administrador"
             });
 
-        var (token, expira) = _servicioDeTokens.GenerarToken(usuario);
+        var (token, expira, jti) = _servicioDeTokens.GenerarToken(usuario);
+
+        await _repositorioSesiones.CrearAsync(new SesionUsuario
+        {
+            UsuarioId = usuario.Id,
+            Jti = jti,
+            FechaExpiracion = expira
+        });
+        // ═══ NUEVO: CADA LOGIN QUEDA ANOTADO ═══
+        // Sin esta fila, el token recién emitido sería rechazado en su
+        // primera petición: el guardia no lo encontraría en la lista.
 
         return Ok(new RespuestaLoginDto
         {
@@ -107,6 +96,27 @@ public class AuthController : ControllerBase
             Rol = usuario.Rol.Nombre,
             Expira = expira
         });
+    }
+
+    // ─── LOGOUT (NUEVO) ────────────────────────────────────────
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout()
+    {
+        var jti = User.FindFirst("jti")?.Value;
+
+        if (jti is not null)
+        {
+            var sesion = await _repositorioSesiones.ObtenerPorJtiAsync(jti);
+            sesion?.Cerrar(DateTime.UtcNow, "logout");
+            await _repositorioSesiones.GuardarAsync();
+        }
+
+        return Ok(new { mensaje = "Sesión cerrada" });
+        // ═══ POR PRIMERA VEZ, CERRAR SESIÓN ES REAL ═══
+        // Antes, el botón de cerrar sesión solo borraba el token del
+        // navegador. Si alguien lo había copiado, seguía sirviendo una hora.
+        // Ahora ese token queda muerto en el servidor, aunque exista una copia.
     }
 
     // ─── QUIÉN SOY ─────────────────────────────────────────────
@@ -165,6 +175,7 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Restablecer(RestablecerPasswordDto dto)
     {
+        var ahora = DateTime.UtcNow;
         var vigentes = await _repositorioRecuperacion.ObtenerTokensVigentesAsync();
 
         TokenRecuperacion? tokenValido = null;
@@ -182,24 +193,21 @@ public class AuthController : ControllerBase
 
         var usuario = tokenValido.Usuario;
         usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NuevaPassword);
-
         usuario.Desbloquear();
-        // ═══ NUEVO: RESTABLECER TAMBIÉN DESBLOQUEA ═══
-        // Piensa en el caso real: un cajero olvida su contraseña, la
-        // intenta cinco veces, queda bloqueado, y pide recuperarla.
-        // Si esto no desbloqueara, restablecería su contraseña y aun así
-        // no podría entrar durante 15 minutos.
-        //
-        // Demostró que controla su correo: es prueba suficiente de que
-        // la cuenta es suya. Este tipo de interacción entre dos
-        // funcionalidades es lo que se escapa cuando se construye cada
-        // una por separado.
 
-        tokenValido.FechaUso = DateTime.UtcNow;
+        await _repositorioSesiones.CerrarTodasDeUsuarioAsync(usuario.Id, ahora, "cambio de contraseña");
+        // ═══ NUEVO: CAMBIAR LA CONTRASEÑA CIERRA TODAS LAS SESIONES ═══
+        // Es práctica estándar de seguridad. Si alguien restablece su
+        // contraseña, probablemente sospecha que otro la conoce. Cualquier
+        // sesión abierta con la contraseña vieja tiene que morir: si no,
+        // el intruso seguiría adentro aunque la clave ya haya cambiado.
+
+        tokenValido.FechaUso = ahora;
 
         await _repositorioRecuperacion.GuardarAsync();
-        // Contraseña nueva, desbloqueo y token quemado en una sola
-        // transacción: los tres objetos los sigue el mismo DbContext.
+        // Un solo guardado para CUATRO cambios: contraseña nueva, desbloqueo,
+        // sesiones cerradas y token quemado. Todo o nada, en una transacción.
+        // Esa es la unidad de trabajo del DbContext en acción.
 
         return Ok(new { mensaje = "Contraseña actualizada. Ya puedes iniciar sesión." });
     }

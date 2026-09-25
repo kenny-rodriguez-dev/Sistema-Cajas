@@ -52,6 +52,7 @@ builder.Services.AddScoped<IRepositorioContratos, RepositorioContratos>();
 builder.Services.AddScoped<IRepositorioPagos, RepositorioPagos>();
 builder.Services.AddScoped<IRepositorioDashboard, RepositorioDashboard>();
 builder.Services.AddScoped<IRepositorioRecuperacion, RepositorioRecuperacion>();
+builder.Services.AddScoped<IRepositorioSesiones, RepositorioSesiones>();
 // Cada línea: "cuando alguien pida la interfaz, entrégale esta clase".
 // Es el único lugar del sistema donde contrato e implementación se tocan.
 
@@ -70,6 +71,41 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audiencia"],
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
+        };
+
+        opciones.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async contexto =>
+            {
+                // ═══ SE EJECUTA DESPUÉS DE QUE LA FIRMA SEA VÁLIDA ═══
+                // Hasta aquí .NET ya comprobó que el token es auténtico
+                // y no venció. Esto agrega UNA pregunta más: ¿la sesión
+                // sigue viva en la base de datos?
+                //
+                // Es el guardia del concierto que por fin tiene una lista
+                // de a quién echaron.
+
+                var jti = contexto.Principal?.FindFirst("jti")?.Value;
+
+                if (jti is null)
+                {
+                    contexto.Fail("El token no tiene identificador de sesión");
+                    return;
+                }
+
+                var sesiones = contexto.HttpContext.RequestServices
+                    .GetRequiredService<IRepositorioSesiones>();
+                // Aquí no hay constructor donde pedir la dependencia:
+                // es una función suelta. Así que se le pide al proveedor
+                // de servicios de la petición actual. Devuelve el mismo
+                // repositorio (y el mismo DbContext) que usará el controlador.
+
+                if (!await sesiones.EstaActivaAsync(jti, DateTime.UtcNow))
+                    contexto.Fail("La sesión fue cerrada");
+                // Fail = la autenticación falla, aunque la firma sea perfecta.
+                // La petición recibe 401, y el interceptor de tus dos
+                // frontends manda al usuario al login solo.
+            }
         };
     });
 

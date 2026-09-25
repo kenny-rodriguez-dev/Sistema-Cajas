@@ -1,9 +1,9 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Domain.Entities;
-using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Services;
 
@@ -11,53 +11,28 @@ public class ServicioDeTokens
 {
     private readonly IConfiguration _configuracion;
 
-    public ServicioDeTokens(IConfiguration configuracion)
-    {
-        _configuracion = configuracion;
-    }
-    // Inyección de dependencias otra vez: pido IConfiguration (el acceso
-    // a appsettings.json) y .NET me lo entrega. No lo busco yo.
+    public ServicioDeTokens(IConfiguration configuracion) => _configuracion = configuracion;
 
-    public (string token, DateTime expira) GenerarToken(Usuario usuario)
+    public (string token, DateTime expira, string jti) GenerarToken(Usuario usuario)
+    // ↑ La tupla ahora devuelve TRES cosas: el login necesita el Jti
+    //   para guardar la sesión.
     {
-        // Ese "(string, DateTime)" es una TUPLA: devolver dos cosas de una vez
-        // sin tener que inventar una clase solo para eso.
+        var jti = Guid.NewGuid().ToString();
+        // Antes el Guid se creaba adentro de la lista de claims y se perdía.
+        // Ahora lo guardo en una variable para poder devolverlo.
 
-        // ─── 1. LOS CLAIMS ───
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
             new Claim(ClaimTypes.Name, usuario.Username),
             new Claim(ClaimTypes.Role, usuario.Rol.Nombre),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, jti)
         };
-        // Un CLAIM es una afirmación sobre el usuario: "su id es 1",
-        // "su rol es Administrador". El token es una bolsa de claims firmada.
-        //
-        // ClaimTypes.Role es especial: .NET lo reconoce y con él funciona
-        // [Authorize(Roles = "Administrador")] sin escribir nada más.
-        //
-        // Jti es un id único por token, para poder revocarlo más adelante.
-        //
-        // ═══ REGLA QUE NO SE ROMPE ═══
-        // NUNCA metas la contraseña, ni el hash, ni datos sensibles aquí.
-        // El contenido del token lo puede leer CUALQUIERA. Ahora verás por qué.
 
-        // ─── 2. LA FIRMA ───
-        var clave = _configuracion["Jwt:Clave"]!;
-        var llaveSimetrica = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(clave));
-        // Convierto mi clave secreta (texto) a bytes, que es lo que
-        // entiende el algoritmo de firma.
+        var llave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuracion["Jwt:Clave"]!));
+        var credenciales = new SigningCredentials(llave, SecurityAlgorithms.HmacSha256);
 
-        var credenciales = new SigningCredentials(
-            llaveSimetrica,
-            SecurityAlgorithms.HmacSha256
-        );
-        // HmacSha256: el algoritmo que produce la firma.
-        // "Simétrica" significa que la misma clave firma y verifica.
-
-        // ─── 3. ARMAR EL TOKEN ───
         var minutos = int.Parse(_configuracion["Jwt:MinutosDeVida"]!);
         var expira = DateTime.UtcNow.AddMinutes(minutos);
 
@@ -68,15 +43,7 @@ public class ServicioDeTokens
             expires: expira,
             signingCredentials: credenciales
         );
-        // issuer  = quién lo emitió
-        // audience = para quién es
-        // Sirven para que un token de OTRO sistema, aunque esté bien firmado,
-        // no sirva en el tuyo.
 
-        string tokenEnTexto = new JwtSecurityTokenHandler().WriteToken(token);
-        // Convierte el objeto en ese texto largo con dos puntos que
-        // viaja por la red.
-
-        return (tokenEnTexto, expira);
+        return (new JwtSecurityTokenHandler().WriteToken(token), expira, jti);
     }
 }

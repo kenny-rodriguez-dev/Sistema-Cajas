@@ -666,6 +666,46 @@ namespace Infrastructure.Migrations
                     b.ToTable("SesionesCaja");
                 });
 
+            modelBuilder.Entity("Domain.Entities.SesionUsuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("FechaCierre")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaExpiracion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Jti")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("nchar(36)")
+                        .IsFixedLength();
+
+                    b.Property<string>("MotivoCierre")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Jti")
+                        .IsUnique();
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("SesionesUsuario");
+                });
+
             modelBuilder.Entity("Domain.Entities.TipoAtencion", b =>
                 {
                     b.Property<int>("Id")
@@ -1020,6 +1060,17 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Caja");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SesionUsuario", b =>
+                {
+                    b.HasOne("Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Usuario");
                 });

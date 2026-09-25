@@ -43,10 +43,21 @@ public class IndicadoresUsuariosDto
     public int Activos { get; set; }
     public int Inactivos { get; set; }
     public int PendientesAprobacion { get; set; }
-    public int ConSesionAbierta { get; set; }
+    public int Bloqueados { get; set; }
     public int Gestores { get; set; }
     public int Cajeros { get; set; }
-    public int Bloqueados { get; set; }
+
+    public int ConSesionActiva { get; set; }
+    // NUEVO: usuarios con al menos una sesión de login viva.
+
+    public int SinSesionActiva => Total - ConSesionActiva;
+    // Propiedad calculada: no se guarda en ningún lado, se deduce.
+    // El JSON la incluye igual, porque .NET serializa las propiedades
+    // de solo lectura. "Sesión activa O INACTIVA", como pide el enunciado.
+
+    public int OperandoCaja { get; set; }
+    // Antes se llamaba ConSesionAbierta. Mismo dato, nombre que ya no
+    // se confunde con las sesiones de login.
 }
 
 public class IndicadorCajaDto
