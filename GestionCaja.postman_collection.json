@@ -459,6 +459,25 @@
           }
         },
         {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/auth/logout",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Cierra en el SERVIDOR la sesión de este token. Después, el mismo token recibe 401: ya no basta con tenerlo copiado."
+          }
+        },
+        {
           "name": "Solicitar recuperación",
           "request": {
             "method": "POST",
@@ -551,7 +570,7 @@
                 "restablecer"
               ]
             },
-            "description": "Token de un solo uso. Restablecer también desbloquea la cuenta.",
+            "description": "Token de un solo uso. Restablecer también desbloquea la cuenta y cierra todas sus sesiones.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"token\": \"PEGA_EL_TOKEN_DE_LA_CONSOLA\",\n  \"nuevaPassword\": \"NuevaClave123\"\n}",
@@ -970,7 +989,7 @@
                 "3"
               ]
             },
-            "description": "El username no se edita: es la identidad en los registros históricos.",
+            "description": "El username no se edita. Si cambia el rol, se cierran sus sesiones: su token tenía el rol viejo.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"correo\": \"nuevo@gestioncaja.com\",\n  \"rolId\": 3,\n  \"activo\": true\n}",
@@ -1019,7 +1038,7 @@
                 "estado"
               ]
             },
-            "description": "No puedes desactivarte a ti mismo ni al último administrador activo."
+            "description": "Desactivar cierra todas sus sesiones al instante. No puedes desactivarte a ti mismo ni al último administrador activo."
           }
         },
         {
@@ -1040,6 +1059,26 @@
               ]
             },
             "description": "409 si el usuario no está bloqueado."
+          }
+        },
+        {
+          "name": "Cerrar sesiones (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/api/usuarios/3/cerrar-sesiones",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "3",
+                "cerrar-sesiones"
+              ]
+            },
+            "description": "Expulsa al usuario de todos sus dispositivos. 409 si no tiene sesiones activas."
           }
         },
         {
@@ -1826,7 +1865,7 @@
                 "dashboard"
               ]
             },
-            "description": "Un solo viaje a la base: sp_IndicadoresDashboard devuelve tres conjuntos de resultados."
+            "description": "Un solo viaje a la base: sp_IndicadoresDashboard devuelve tres conjuntos de resultados. conSesionActiva cuenta USUARIOS con sesión de login viva; operandoCaja, los que tienen una caja abierta."
           }
         },
         {

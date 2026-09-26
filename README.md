@@ -48,6 +48,7 @@ La base de datos se crea sola: al arrancar, la aplicación aplica sus migracione
 - Dashboard con indicadores de usuarios, cajas y turnos, filtrable por fechas
 - Crea usuarios (nacen aprobados), los edita, activa, desactiva y desbloquea
 - Aprueba los usuarios que crean los gestores
+- Ve quién está conectado y puede cerrarle las sesiones en todos sus dispositivos
 - Carga masiva de usuarios desde Excel o CSV
 
 **Gestor**
@@ -158,9 +159,10 @@ El backend no cambia en nada entre uno y otro.
 
 - **Contraseñas y tokens de recuperación** con BCrypt: hash con salt, nunca en claro
 - **JWT** firmado con HS256. El rol viaja en los claims y el backend lo verifica en cada petición
+- **Sesiones revocables:** cada login queda registrado por el identificador único de su token (`jti`), y cada petición verifica que esa sesión siga viva. Cerrar sesión, desactivar a un usuario, cambiarle el rol o restablecer su contraseña cierran sus sesiones al instante; el administrador también puede cerrarlas a mano. Sin esto, un usuario desactivado seguiría entrando hasta que venciera su token
 - **Autorización por rol** con `[Authorize(Roles = "...")]`. El menú oculta opciones, pero quien prohíbe es el backend
 - **Bloqueo por intentos fallidos:** cinco contraseñas equivocadas seguidas bloquean la cuenta 15 minutos. El bloqueo se revisa antes que la contraseña
-- **Recuperación de contraseña** con tokens de un solo uso, 256 bits de entropía criptográfica y 15 minutos de vida. Restablecer la contraseña también desbloquea la cuenta
+- **Recuperación de contraseña** con tokens de un solo uso, 256 bits de entropía criptográfica y 15 minutos de vida. Restablecer la contraseña también desbloquea la cuenta y cierra todas sus sesiones
 - **Mensajes genéricos** en login y recuperación, para no permitir enumerar cuentas
 - **Montos calculados en el servidor:** el cliente indica qué mes paga, nunca cuánto
 - **Consultas parametrizadas** en todo el SQL directo
@@ -207,7 +209,7 @@ Los dos están en `stored-procedures.sql` y se crean con las migraciones.
 ## Documentación de la API
 
 - **Swagger:** `http://localhost:5000/swagger` (o el puerto local del backend). Usa el botón *Authorize* con el token que devuelve el login.
-- **Postman:** `GestionCaja.postman_collection.json`, con 62 peticiones organizadas por área. Cada una describe qué demuestra y qué respuesta esperar. El login guarda el token automáticamente.
+- **Postman:** `GestionCaja.postman_collection.json`, con 64 peticiones organizadas por área. Cada una describe qué demuestra y qué respuesta esperar. El login guarda el token automáticamente.
 
 ---
 
@@ -216,7 +218,8 @@ Los dos están en `stored-procedures.sql` y se crean con las migraciones.
 - **El correo de recuperación no se envía.** El token se genera, se guarda y se valida igual que en producción; el enlace se imprime en la consola del backend. Falta conectar un proveedor SMTP.
 - **El mensaje de bloqueo revela que la cuenta existe.** Es un equilibrio consciente: sin él, un usuario bloqueado que escribe su contraseña correcta recibiría "usuario o contraseña incorrectos" sin entender por qué. La solución completa es limitar intentos por nombre de usuario escrito y por IP, existan o no.
 - **El contador de intentos fallidos no es atómico.** Dos intentos simultáneos pueden contarse como uno. Un `UPDATE` atómico, como el del procedimiento de turnos, lo resolvería.
-- **"Sesión abierta" en el dashboard cuenta sesiones de caja, no de login.** Con JWT el servidor no guarda quién está conectado: el token vive en el navegador. Saberlo exigiría registrar las sesiones del lado del servidor.
+- **Verificar la sesión cuesta una consulta por petición.** JWT puro no consulta la base de datos: verifica la firma y listo. Hacerlo revocable lo vuelve con estado otra vez. La consulta va por un índice único y es rápida, pero con mucho tráfico convendría guardar el estado de las sesiones en caché durante unos segundos.
+- **Una sesión sigue activa aunque se cierre la pestaña**, hasta que alguien cierre sesión o el token venza. Es lo correcto desde el punto de vista de la seguridad: el token sigue sirviendo, así que la sesión existe.
 - **`MigrateAsync()` al arrancar** es adecuado para desarrollo y demostraciones, no para producción con varias instancias: allí las migraciones se aplican en un paso separado del despliegue.
 - **El token se guarda en `localStorage`**, accesible desde JavaScript. Una cookie `httpOnly` sería más resistente a XSS, a cambio de más complejidad entre dominios.
 - **El lector de CSV es básico:** no maneja campos que contengan punto y coma entre comillas. Para producción correspondería CsvHelper.

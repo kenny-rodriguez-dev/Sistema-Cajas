@@ -10,6 +10,7 @@
      sp_SiguienteNumeroTurno   ->  migración CrearTurnos
      sp_IndicadoresDashboard   ->  migración DashboardStoredProcedure,
                                    modificado por BloqueoPorIntentos
+                                   y por SesionesDeUsuario
 
    Este archivo reúne su VERSIÓN ACTUAL para consulta y entrega.
    No hace falta ejecutarlo si la base se creó con las migraciones.
@@ -97,6 +98,10 @@ GO
    Bloqueados se compara con SYSUTCDATETIME() y no con GETDATE(): el campo
    BloqueadoHasta se guarda en UTC, y GETDATE() devuelve la hora local del
    servidor.
+
+   ConSesionActiva cuenta USUARIOS con al menos una sesión de login viva
+   (COUNT DISTINCT): alguien conectado desde dos dispositivos cuenta una vez.
+   OperandoCaja es otra cosa: usuarios con una sesión de CAJA abierta.
    ============================================================================ */
 
 CREATE OR ALTER PROCEDURE sp_IndicadoresDashboard
@@ -115,7 +120,10 @@ BEGIN
         SUM(CASE WHEN u.BloqueadoHasta > SYSUTCDATETIME() THEN 1 ELSE 0 END) AS Bloqueados,
         SUM(CASE WHEN r.Nombre = 'Gestor' THEN 1 ELSE 0 END)                AS Gestores,
         SUM(CASE WHEN r.Nombre = 'Cajero' THEN 1 ELSE 0 END)                AS Cajeros,
-        (SELECT COUNT(*) FROM SesionesCaja WHERE FechaCierre IS NULL)       AS ConSesionAbierta
+        (SELECT COUNT(DISTINCT s.UsuarioId) FROM SesionesUsuario s
+          WHERE s.FechaCierre IS NULL
+            AND s.FechaExpiracion > SYSUTCDATETIME())                       AS ConSesionActiva,
+        (SELECT COUNT(*) FROM SesionesCaja WHERE FechaCierre IS NULL)       AS OperandoCaja
     FROM Usuarios u
     INNER JOIN Roles r ON r.Id = u.RolId;
 
